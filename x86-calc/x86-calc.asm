@@ -37,7 +37,7 @@ END:
 ; end _start
 
 
-; 
+; Call according to program mode.
 CHOOSE_MODE:
     push r8                     ; backup general purpose r8 for string address
     mov  r8,PROGRAM_MODE        ; load the program mode
@@ -51,14 +51,16 @@ CHOOSE_MODE_SKIP_CALC:
 CHOOSE_MODE_STRREV:
     pop  r8             ; restore general purpose
     ret
+; end CHOOSE_MODE
 
 
-; perform the calc program
+; Perform the calc program.
 CALC:
     ret
+; end CALC
 
 
-; Test the STRREV function on REV_TEST
+; Test the STRREV function on REV_TEST.
 TEST_STRREV:
     ; C equivalent: STRREV(REV_TEST, REV_LEN);
     mov  rsi,REV_TEST   ; reversed string to print
@@ -75,6 +77,7 @@ TEST_STRREV:
     mov  rdx,1          ; 1 character to print
     syscall     ; execute the system call
     ret
+; end TEST_STRREV
 
 
 ; Reverses a string using the stack, storing the result in the address
