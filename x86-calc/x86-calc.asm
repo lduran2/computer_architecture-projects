@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v1.1.1 - 2022-06-16t02:31Q
+;       demos for ITOA
+;
 ;   v1.1.0 - 2022-06-16t01:57Q
 ;       added program modes
 ;
