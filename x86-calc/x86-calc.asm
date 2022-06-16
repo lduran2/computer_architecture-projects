@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v1.2.0 - 2022-06-16t17:42Q
+;       ready to print ITOA demos
+;
 ;   v1.1.1 - 2022-06-16t02:31Q
 ;       demos for ITOA
 ;
@@ -63,13 +66,22 @@ CALC:
 ; end CALC
 
 
-TEST_ATOI:
-    
+TEST_ITOA:
+    push rcx            ; backup counter
+    push r8             ; backup general purpose r8 for string address
+    mov  rcx,ITOA_LEN   ; number of integers to test
+TEST_ITOA_TEST_LOOP:
+    ; print the last number converted
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    syscall     ; execute the system call
+    loop TEST_ITOA_TEST_LOOP    ; repeat
+TEST_ITOA_TEST_END:
+    pop  r8             ; restore general purpose
+    pop  rcx            ; restore counter
     ret
-; end TEST_ATOI
-
-ATOI:
-; end ATOI
+; end TEST_ITOA
 
 
 ; Test the STRREV function on REV_TEST.
@@ -90,6 +102,11 @@ TEST_STRREV:
     syscall     ; execute the system call
     ret
 ; end TEST_STRREV
+
+; Converts an integer to ASCII.
+ITOA:
+    ret
+; end ITOA
 
 
 ; Reverses a string using the stack, storing the result in the address
