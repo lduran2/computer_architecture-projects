@@ -39,16 +39,16 @@ END:
 
 ; Call according to program mode.
 CHOOSE_MODE:
-    push r8                     ; backup general purpose r8 for string address
-    mov  r8,PROGRAM_MODE        ; load the program mode
-    cmp  r8,0                   ; if (PROGRAM_MODE != 0)
-    jne  CHOOSE_MODE_SKIP_CALC  ;   skip
-    call CALC                   ; else run CALC
+    push r8             ; backup general purpose r8 for string address
+    mov  r8,PROGRAM_MODE            ; load the program mode
+    cmp  r8,0                       ; if (PROGRAM_MODE != 0)
+    jne  CHOOSE_MODE_SKIP_CALC      ;   skip
+    call CALC                       ; else run CALC
 CHOOSE_MODE_SKIP_CALC:
-    cmp  r8,1                   ; if (PROGRAM_MODE != 1)
-    jne  CHOOSE_MODE_STRREV     ;   skip
-    call TEST_STRREV            ; else run TEST_STRREV
-CHOOSE_MODE_STRREV:
+    cmp  r8,1                       ; if (PROGRAM_MODE != 1)
+    jne  CHOOSE_MODE_SKIP_STRREV    ;   skip
+    call TEST_STRREV                ; else run TEST_STRREV
+CHOOSE_MODE_SKIP_STRREV:
     pop  r8             ; restore general purpose
     ret
 ; end CHOOSE_MODE
@@ -58,6 +58,15 @@ CHOOSE_MODE_STRREV:
 CALC:
     ret
 ; end CALC
+
+
+TEST_ATOI:
+    
+    ret
+; end TEST_ATOI
+
+ATOI:
+; end ATOI
 
 
 ; Test the STRREV function on REV_TEST.
@@ -116,11 +125,16 @@ section .data
 ; Program modes:
 ;   0 - calculator
 ;   1 - test STRREV string reverser
-PROGRAM_MODE:   equ 1
+;   2 - test itoa (integer to ASCII) for printing integers
+PROGRAM_MODE:   equ 2
 ; string to be reversed
 REV_TEST:       db "Hello world!"
 ; length of REV_TEST
 REV_LEN:        equ $ - REV_TEST
 ; newline character
 ENDL:           db 0ah
-
+; array of integers to print
+; (double word, 32-bits)
+ITOA_TEST:      dd 365,42,-1760
+; number of integers to print
+ITOA_LEN:       equ $ - ITOA_TEST
