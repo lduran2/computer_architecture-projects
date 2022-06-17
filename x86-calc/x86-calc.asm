@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v1.2.1 - 2022-06-17t01:49Q
+;       loading ITOA demos
+;
 ;   v1.2.0 - 2022-06-16t17:42Q
 ;       ready to print ITOA demos
 ;
@@ -66,20 +69,21 @@ CALC:
 ; end CALC
 
 
+; Test the ITOA function on ITOA_TEST
 TEST_ITOA:
-    push rcx            ; backup counter
-    push r8             ; backup general purpose r8 for string address
     mov  rcx,ITOA_LEN   ; number of integers to test
+    mov  r8,ITOA_TEST   ; initialize the integer address
 TEST_ITOA_TEST_LOOP:
+    mov  rsi,[r8]       ; get the current number
+    ; C equivalent: write(1, rsi, rdx);
     ; print the last number converted
     mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
-    syscall     ; execute the system call
+    mov  rdi,1          ; file descriptor to which to print,
+                        ; namely: STDOUT (standard output)
+    syscall             ; execute the system call
+    inc  r8             ; next integer
     loop TEST_ITOA_TEST_LOOP    ; repeat
 TEST_ITOA_TEST_END:
-    pop  r8             ; restore general purpose
-    pop  rcx            ; restore counter
     ret
 ; end TEST_ITOA
 
@@ -116,7 +120,7 @@ STRREV:
     push r8             ; backup general purpose r8 for string address
     push r9             ; backup general purpose r9 for character
     mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rsi         ; initialize the 
+    mov  r8,rsi         ; initialize the string address
 ; push loop
 STRREV_PUSH_LOOP:
     mov  r9,[r8]            ; copy the character
@@ -125,7 +129,7 @@ STRREV_PUSH_LOOP:
     loop STRREV_PUSH_LOOP   ; repeat
 STRREV_PUSH_END:
     mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rsi         ; initialize the 
+    mov  r8,rsi         ; initialize the string address
 STRREV_POP_LOOP:
     pop  r9                 ; pop the character
     mov  [r8],r9            ; place the character in the string
