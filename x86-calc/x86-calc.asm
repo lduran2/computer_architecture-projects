@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v1.2.3 - 2022-06-20t11:51Q
+;       ITOA 128-bit test
+;
 ;   v1.2.2 - 2022-06-17t01:59Q
 ;       documentation: ITOA, STRREV
 ;
@@ -76,6 +79,7 @@ CALC:
 TEST_ITOA:
     mov  rcx,ITOA_LEN   ; number of integers to test
     mov  r8,ITOA_TEST   ; initialize the integer address
+; run each test
 TEST_ITOA_TEST_LOOP:
     mov  rsi,[r8]       ; get the current number
     call ITOA           ; convert to a string
@@ -111,13 +115,15 @@ TEST_STRREV:
     ret
 ; end TEST_STRREV
 
-; ITOA(char *rsi, union { int i, char *s } *rdx)
+
+; ITOA(char *rsi, union { int i; char *s; } *rdx)
 ; Converts an integer to ASCII.
 ; @param
-;   *rsi :
-;       in  int    = integer to convert
-;       out char * = string converted from integer
-;   rdx  : out int * = length of string converted from integer
+;   rsi  : int = integer to convert
+; @param
+;   rdi  : out char * = string converted from integer
+; @param
+;   rdx  : out int * = pointer to length of string converted from integer
 ITOA:
     mov  rdx,0          ; set rdx to 0
     ret
@@ -125,8 +131,7 @@ ITOA:
 
 
 ; STRREV(char *rsi, int rsi)
-; Reverses a string using the stack, storing the result in the address
-; of the original string.
+; Reverses a string using the stack in place.
 ; @param
 ;   rsi : 
 ;       in  char * = the string to reverse
@@ -139,7 +144,7 @@ STRREV:
     push r9             ; backup general purpose r9 for character
     mov  rcx,rdx        ; set counter to rdx
     mov  r8,rsi         ; initialize the string address
-; push loop
+; push each character onto the stack
 STRREV_PUSH_LOOP:
     mov  r9,[r8]            ; copy the character
     push r9                 ; push it onto stack
@@ -148,6 +153,7 @@ STRREV_PUSH_LOOP:
 STRREV_PUSH_END:
     mov  rcx,rdx        ; set counter to rdx
     mov  r8,rsi         ; initialize the string address
+; pop each character off the stack
 STRREV_POP_LOOP:
     pop  r9                 ; pop the character
     mov  [r8],r9            ; place the character in the string
@@ -176,7 +182,10 @@ REV_LEN:        equ $ - REV_TEST
 ; newline character
 ENDL:           db 0ah
 ; array of integers to print
-; (double word, 32-bits)
-ITOA_TEST:      dd 365,42,-1760
+; (quad word, 64-bits)
+ITOA_TEST:      dq 365,42,-1760
+; oct word, 128-bit test
+ITOA_TEST2:     dq (1 << (64 - 1)),365
 ; number of integers to print
 ITOA_LEN:       equ $ - ITOA_TEST
+
