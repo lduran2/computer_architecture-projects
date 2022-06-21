@@ -3,19 +3,24 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
-;   v1.2.4 - 2022-06-21t03:18Q
+;   v2.3.1 - 2022-06-21t04:39Q
+;       counting digits (< 10)
+;       fixed ITOA choose
+;       ITOA test call
+;
+;   v2.3.0 - 2022-06-21t03:18Q
 ;       ITOA division loop conditions
 ;
-;   v1.2.2 - 2022-06-17t01:59Q
+;   v2.1.1 - 2022-06-17t01:59Q
 ;       documentation: ITOA, STRREV
 ;
-;   v1.2.1 - 2022-06-17t01:49Q
+;   v2.1.0 - 2022-06-17t01:49Q
 ;       loading ITOA demos
 ;
-;   v1.2.0 - 2022-06-16t17:42Q
+;   v2.0.0 - 2022-06-16t17:42Q
 ;       ready to print ITOA demos
 ;
-;   v1.1.1 - 2022-06-16t02:31Q
+;   v1.2.0 - 2022-06-16t02:31Q
 ;       demos for ITOA
 ;
 ;   v1.1.0 - 2022-06-16t01:57Q
@@ -55,15 +60,20 @@ END:
 ; Call according to program mode.
 CHOOSE_MODE:
     push r8             ; backup general purpose r8 for string address
-    mov  r8,PROGRAM_MODE            ; load the program mode
-    cmp  r8,0                       ; if (PROGRAM_MODE != 0)
-    jne  CHOOSE_MODE_SKIP_CALC      ;   skip
-    call CALC                       ; else run CALC
-CHOOSE_MODE_SKIP_CALC:
-    cmp  r8,1                       ; if (PROGRAM_MODE != 1)
-    jne  CHOOSE_MODE_SKIP_STRREV    ;   skip
-    call TEST_STRREV                ; else run TEST_STRREV
-CHOOSE_MODE_SKIP_STRREV:
+    mov  r8,PROGRAM_MODE        ; load the program mode
+CHOOSE_MODE_CALC:
+    cmp  r8,0                   ; if (PROGRAM_MODE != 0)
+    jne  CHOOSE_MODE_STRREV     ;   check for STRREV
+    call CALC                   ; else run CALC
+CHOOSE_MODE_STRREV:
+    cmp  r8,1                   ; if (PROGRAM_MODE != 1)
+    jne  CHOOSE_MODE_ITOA       ;   check for ITOA
+    call TEST_STRREV            ; else run TEST_STRREV
+CHOOSE_MODE_ITOA:
+    cmp  r8,2                   ; if (PROGRAM_MODE != 2)
+    jne  CHOOSE_MODE_DEFAULT    ;   default
+    call TEST_ITOA              ; else run TEST_ITOA
+CHOOSE_MODE_DEFAULT:
     pop  r8             ; restore general purpose
     ret
 ; end CHOOSE_MODE
@@ -77,20 +87,28 @@ CALC:
 
 ; Test the ITOA function on ITOA_TEST
 TEST_ITOA:
-    mov  rcx,ITOA_LEN   ; number of integers to test
     mov  r8,ITOA_TEST   ; initialize the integer address
+    mov  rcx,ITOA_LEN   ; number of integers to test
 ; run each test
 TEST_ITOA_TEST_LOOP:
-    mov  rsi,[r8]       ; get the current number
-    call ITOA           ; convert to a string
-    ; C equivalent: write(1, rsi, rdx);
+    mov  rsi,RADIX              ; set radix
+    mov  rdx,0                  ; clear high bytes of (rdx:rax)
+    mov  rax,[r8]               ; get the current number
+    call ITOA                   ; convert to a string
+    or   rdx,'0'                ; convert count to character
+    mov  [N_DIGITS],rdx         ; store in N_DIGITS
+    ; C equivalent: write(1, N_DIGITS, 1);
     ; print the last number converted
-    mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print,
-                        ; namely: STDOUT (standard output)
+    mov  rsi,N_DIGITS           ; to print
+    mov  rdx,1                  ; 1st digit of digit count
+    mov  rax,1                  ; system call to perform: sys_write
+    mov  rdi,1                  ; file descriptor to which to print,
+                                ; namely: STDOUT (standard output)
+    push rcx            ; guard from write changing rcx
     syscall             ; execute the system call
-    inc  r8             ; next integer
-    loop TEST_ITOA_TEST_LOOP    ; repeat
+    pop  rcx            ; restore rcx
+    add  r8,8                   ; next integer
+   loop TEST_ITOA_TEST_LOOP    ; repeat
 TEST_ITOA_TEST_END:
     ret
 ; end TEST_ITOA
@@ -126,15 +144,20 @@ TEST_STRREV:
 ;   (rdx:rax) : in  int128_t = integer to convert
 ;   rdx       : out int = length of string converted from integer
 ITOA:
+    push r8             ; backup general purpose r8 for digit count
+    mov  r8,0           ; clear digit count
 ; loop while dividing (rdx:rax) by radix (rsi)
 ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
+    inc  r8                     ; count digits so far
     cmp  rax,0                  ; if (quotient==0)
-    jne  ITOA_DIVIDE_INT_END    ; then break
+    je  ITOA_DIVIDE_INT_END     ; then break
     mov  rdx,0                  ; clear rdx
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
+    mov  rdx,r8         ; store string length
+    pop  r8             ; restore general purpose
     ret
 ; end ITOA
 
@@ -187,12 +210,20 @@ PROGRAM_MODE:   equ 2
 ; string to be reversed
 REV_TEST:       db "Hello world!"
 ; length of REV_TEST
-REV_LEN:        equ $ - REV_TEST
+REV_LEN:        equ ($ - REV_TEST)
 ; newline character
 ENDL:           db 0ah
+; radix (default decimal numbers)
+RADIX:          equ 10
 ; array of integers to print
 ; (quad word, 64-bits)
-ITOA_TEST:      dq 365,42,-1760
+ITOA_TEST:      dq 365,42,250,-1760
 ; number of integers to print
-ITOA_LEN:       equ $ - ITOA_TEST
+; ($ - ITOA_TEST) gives bytes,
+; but each integer is a quad word = 8 bytes
+ITOA_LEN:       equ (($ - ITOA_TEST)/8)
 
+
+section .bss
+; allow 1 byte for the digit length
+N_DIGITS:      resb 1
