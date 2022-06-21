@@ -3,8 +3,8 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
-;   v1.2.3 - 2022-06-20t11:51Q
-;       ITOA 128-bit test
+;   v1.2.4 - 2022-06-21t03:18Q
+;       ITOA division loop conditions
 ;
 ;   v1.2.2 - 2022-06-17t01:59Q
 ;       documentation: ITOA, STRREV
@@ -116,16 +116,25 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
-; ITOA(char *rsi, union { int i; char *s; } *rdx)
+; ITOA(char *rdi, int rsi, int (rdx:rax))
 ; Converts an integer to ASCII.
 ; @param
-;   rsi  : int = integer to convert
+;   rdi : out char * = string converted from integer
 ; @param
-;   rdi  : out char * = string converted from integer
+;   rsi : out int = radix of the integer
 ; @param
-;   rdx  : out int * = pointer to length of string converted from integer
+;   (rdx:rax) : in  int128_t = integer to convert
+;   rdx       : out int = length of string converted from integer
 ITOA:
-    mov  rdx,0          ; set rdx to 0
+; loop while dividing (rdx:rax) by radix (rsi)
+ITOA_DIVIDE_INT_LOOP:
+    ; (rax, rdx) = divmod((rdx:rax), rsi);
+    idiv rsi                    ; divide (rdx:rax) by radix
+    cmp  rax,0                  ; if (quotient==0)
+    jne  ITOA_DIVIDE_INT_END    ; then break
+    mov  rdx,0                  ; clear rdx
+    jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
+ITOA_DIVIDE_INT_END:
     ret
 ; end ITOA
 
@@ -184,8 +193,6 @@ ENDL:           db 0ah
 ; array of integers to print
 ; (quad word, 64-bits)
 ITOA_TEST:      dq 365,42,-1760
-; oct word, 128-bit test
-ITOA_TEST2:     dq (1 << (64 - 1)),365
 ; number of integers to print
 ITOA_LEN:       equ $ - ITOA_TEST
 
