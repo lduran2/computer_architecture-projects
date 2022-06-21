@@ -3,6 +3,12 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.4.0 - 2022-06-21t19:40Q
+;       optimized ITOA_DIVIDE_INT_LOOP: test quotient, not cmp
+;
+;   v2.3.2 - 2022-06-21t19:44Q
+;       proper handling of sign bit
+;
 ;   v2.3.1 - 2022-06-21t04:39Q
 ;       counting digits (< 10)
 ;       fixed ITOA choose
@@ -92,8 +98,11 @@ TEST_ITOA:
 ; run each test
 TEST_ITOA_TEST_LOOP:
     mov  rsi,RADIX              ; set radix
-    mov  rdx,0                  ; clear high bytes of (rdx:rax)
     mov  rax,[r8]               ; get the current number
+    ; copy sign bit
+    mov  rdx,rax                ; copy low bits into high bits
+    sar  rdx,63                 ; shift sign bit through rdx
+    ; done copying sign bit
     call ITOA                   ; convert to a string
     or   rdx,'0'                ; convert count to character
     mov  [N_DIGITS],rdx         ; store in N_DIGITS
@@ -142,7 +151,7 @@ TEST_STRREV:
 ;   rsi : out int = radix of the integer
 ; @param
 ;   (rdx:rax) : in  int128_t = integer to convert
-;   rdx       : out int = length of string converted from integer
+;   rdx       : out int      = length of string converted from integer
 ITOA:
     push r8             ; backup general purpose r8 for digit count
     mov  r8,0           ; clear digit count
@@ -151,9 +160,12 @@ ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
     inc  r8                     ; count digits so far
-    cmp  rax,0                  ; if (quotient==0)
-    je  ITOA_DIVIDE_INT_END     ; then break
-    mov  rdx,0                  ; clear rdx
+    test rax,-1                 ; if (!quotient)
+    je   ITOA_DIVIDE_INT_END    ; then break
+    ; copy sign bit
+    mov  rdx,rax                ; copy low bits into high bits
+    sar  rdx,63                 ; shift sign bit through rdx
+    ; done copying sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
     mov  rdx,r8         ; store string length
@@ -224,6 +236,9 @@ ITOA_TEST:      dq 365,42,250,-1760
 ITOA_LEN:       equ (($ - ITOA_TEST)/8)
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; This segment allocates memory to which to write.
 section .bss
 ; allow 1 byte for the digit length
 N_DIGITS:      resb 1
+
