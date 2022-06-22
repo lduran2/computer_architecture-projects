@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.1.2 - 2022-06-22t17:36Q
+;       ATOI = last digit
+;
 ;   v3.1.2 - 2022-06-22t13:37Q
 ;       mock ATOI=0, fixed string rep to print
 ;
@@ -146,7 +149,7 @@ TEST_ATOI:
     mov  rsi,ECHO_IN    ; buffer address for storage
     mov  rdx,INT_LEN    ; acceptable buffer length
     syscall     ; execute the system call
-    ; C equivalent: ATOI(&rdi, RADIX, ECHO_IN)
+    ; C equivalent: ATOI(&rdi, RADIX, INT_LEN, ECHO_IN)
     mov  rsi,RADIX              ; set radix
     mov  rax,ECHO_IN            ; parse from ECHO_IN
     call ATOI
@@ -225,7 +228,7 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
-; ATOI(int *rdi, int rsi, char *rax)
+; ATOI(int *rdi, int rsi, int rdx, char *rax)
 ; Ascii TO Integer
 ; parses an integer from its ASCII string representation.
 ; @param
@@ -233,9 +236,36 @@ TEST_STRREV:
 ; @param
 ;   rsi : int = radix of the integer
 ; @param
+;   rdx : int = length of string to parse
+; @param
 ;   rax : in  char * = string representation of the integer to parse
 ATOI:
-    mov rdi,0
+    push rcx            ; backup counter
+    push r8             ; backup general purpose r8 for source address
+    push r9             ; backup general purpose r9 for character
+    mov  rdi,0          ; initialize the integer
+    mov  rcx,rdx        ; set counter to rdx
+    mov  r8,rax         ; initialize the source address
+ATOI_STR_LOOP:
+    mov  r9,[r8]            ; copy the character
+    test r9,-1              ; if (null character),
+    je  ATOI_STR_END       ; then finish the loop
+    ; test r9,'@'             ; can the character be a single numeric digit?
+    ; jne  ATOI_NUMERIC       ; if so, go to numeric
+; ATOI_ALPHA:
+    ; xor  r9,'@'                 ; disable '@' MSB for number value
+    ; add  r9,9                   ; all alpha characters after '9'
+    ; jmp  ATOI_STORE_DIGIT       ; skip numeric
+; ATOI_NUMERIC:
+    ; xor  r9,'0'                 ; disable '0' bits for number value
+ATOI_STORE_DIGIT:
+    mov  rdi,r9                 ; add the digit to the number
+    inc  r8                 ; next character in source
+    loop ATOI_STR_LOOP      ; repeat
+ATOI_STR_END:
+    pop  r9             ; restore general purpose
+    pop  r8             ; restore general purpose
+    pop  rcx            ; restore counter
     ret
 ; end ATOI
 
