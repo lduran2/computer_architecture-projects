@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.9.1 - 2022-06-22t13:47Q
+;       just use high quad word for sign flag
+;
 ;   v2.9.0 - 2022-06-22t02:28Q
 ;       ITOA pushes digits, inlines STRREV_POP_INIT
 ;
@@ -189,8 +192,7 @@ ITOA_PUSH:
                         ; for character
     push r10            ; backup general purpose r10 for sign register
     mov  r8,0           ; clear digit count
-    mov  r10,rax            ; copy low bits into sign register
-    sar  r10,63             ; shift sign bit through sign register
+    mov  r10,rdx            ; copy high quad word into sign flag
     test r10,-1             ; test sign bit
     je   ITOA_NOW_POSITIVE  ; if not set, then already positive
     ; otherwise
