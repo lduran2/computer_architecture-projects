@@ -3,7 +3,10 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
-;   v3.0.0 - 2022-06-22t02:28Q
+;   v3.1.0 - 2022-06-22t03:26Q
+;       just printing input with no processing
+;
+;   v3.0.0 - 2022-06-22t03:17Q
 ;       prompt for parse and echo (ATOI test)
 ;
 ;   v2.9.0 - 2022-06-22t02:28Q
@@ -119,12 +122,26 @@ CALC:
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
     ; C equivalent: write(1, ECHO_PROMPT, ECHO_PROMPT_LEN);
-    ; print the greeting to standard output
+    ; print the prompt to standard output
     mov rax, 1          ; system call to perform: sys_write
     mov rdi, 1          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
     mov rsi, ECHO_PROMPT        ; prompt to print
     mov rdx, ECHO_PROMPT_LEN    ; length of the prompt
+    syscall     ; execute the system call
+    ; C equivalent: read(0, ECHO_IN, INT_LEN);
+    ; accept user input into ECHO_IN
+    mov rax, 0          ; system call to perform: sys_read
+    mov rdi, 0          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    mov rsi, ECHO_IN    ; buffer address for storage
+    mov rdx, INT_LEN    ; acceptable buffer length
+    syscall     ; execute the system call
+    ; C equivalent: write(1, ECHO_IN, INT_LEN);
+    ; print the input directly
+    mov rax, 1          ; system call to perform: sys_write
+    mov rdi, 1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
     syscall     ; execute the system call
 ;    jmp  TEST_ATOI      ; repeat infinitely
     ret
@@ -344,6 +361,8 @@ ITOA_TEST:      dq 365,42,250,-1760
 ; ($ - ITOA_TEST) gives bytes,
 ; but each integer is a quad word = 8 bytes
 ITOA_LEN:       equ (($ - ITOA_TEST)/8)
+; character length of a decimal integer (20 digits + sign)
+INT_LEN:        equ 21
 ; prompt for user to enter integer
 ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
@@ -353,7 +372,11 @@ ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for reverser test results
-REV_TEST_DST:  times REV_LEN resb 0
-; allow 21 bytes for result of ITOA test (20 digits + sign)
-ITOA_TEST_DST:  resb 21
+REV_TEST_DST:   times REV_LEN resb 0
+; allow 21 bytes for result of ITOA test
+ITOA_TEST_DST:  resb INT_LEN
+; buffer for input
+ECHO_IN:        resb INT_LEN
+; resulting string from echo
+ECHO_DST:       resb INT_LEN
 
