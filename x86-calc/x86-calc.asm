@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.0.0 - 2022-06-22t02:28Q
+;       prompt for parse and echo (ATOI test)
+;
 ;   v2.9.0 - 2022-06-22t02:28Q
 ;       ITOA pushes digits, inlines STRREV_POP_INIT
 ;
@@ -95,8 +98,12 @@ CHOOSE_MODE_STRREV:
     call TEST_STRREV            ; else run TEST_STRREV
 CHOOSE_MODE_ITOA:
     cmp  r8,2                   ; if (PROGRAM_MODE != 2)
-    jne  CHOOSE_MODE_DEFAULT    ;   default
+    jne  CHOOSE_MODE_ECHO       ;   check for ECHO
     call TEST_ITOA              ; else run TEST_ITOA
+CHOOSE_MODE_ECHO:
+    cmp  r8,3                   ; if (PROGRAM_MODE != 3)
+    jne  CHOOSE_MODE_DEFAULT    ;   default
+    call TEST_ATOI              ; else run TEST_ATOI
 CHOOSE_MODE_DEFAULT:
     pop  r8             ; restore general purpose
     ret
@@ -109,16 +116,33 @@ CALC:
 ; end CALC
 
 
+; Test the ATOI function by parse and echo
+TEST_ATOI:
+    ; C equivalent: write(1, ECHO_PROMPT, ECHO_PROMPT_LEN);
+    ; print the greeting to standard output
+    mov rax, 1          ; system call to perform: sys_write
+    mov rdi, 1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    mov rsi, ECHO_PROMPT        ; prompt to print
+    mov rdx, ECHO_PROMPT_LEN    ; length of the prompt
+    syscall     ; execute the system call
+;    jmp  TEST_ATOI      ; repeat infinitely
+    ret
+; end TEST_ATOI
+
+
 ; Test the ITOA function on ITOA_TEST
 TEST_ITOA:
     mov  r8,ITOA_TEST   ; initialize the integer address
     mov  rcx,ITOA_LEN   ; number of integers to test
 ; run each test
 TEST_ITOA_TEST_LOOP:
-    mov  rdi,ITOA_TEST_DST      ; set result address
-    mov  rsi,RADIX              ; set radix
+    ; C equivalent: SIGN128(rdx, *r8);
     mov  rax,[r8]               ; get the current number
     call SIGN128                ; extend sign bit
+    ; C equivalent: ITOA(ITOA_TEST_DST, RADIX, rdx, *r8);
+    mov  rdi,ITOA_TEST_DST      ; set result address
+    mov  rsi,RADIX              ; set radix
     call ITOA                   ; convert to a string
     ; C equivalent: write(1, ITOA_TEST_DST, rdx);
     ; print the last number converted
@@ -144,7 +168,7 @@ TEST_ITOA_TEST_END:
 
 ; Test the STRREV function on REV_TEST.
 TEST_STRREV:
-    ; C equivalent: STRREV(REV_TEST, REV_LEN);
+    ; C equivalent: STRREV(REV_TEST_DST, REV_TEST, REV_LEN);
     mov  rdi,REV_TEST_DST   ; addres to place reversed string
     mov  rsi,REV_TEST   ; string to reverse
     mov  rdx,REV_LEN    ; length of the string to print
@@ -164,7 +188,7 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
-; ITOA(char *rdi, int rsi, int128_t (rdx:rax))
+; ITOA(char *rdi, int rsi, int rdx, int rax)
 ; Integer TO Ascii
 ; converts an integer to ASCII.
 ; @param
@@ -172,8 +196,11 @@ TEST_STRREV:
 ; @param
 ;   rsi : int = radix of the integer
 ; @param
-;   (rdx:rax) : in  int128_t = integer to convert
-;   rdx       : out int      = length of string converted from integer
+;   rdx :
+;       in  int = upper quad word of integer to convert
+;       out int = length of string converted from integer
+; @param
+;   rax : in  int = lower quad word of integer to convert
 ITOA:
     ; safeguard the radix
     push rsi            ; backup radix (replaced in ITOA_PUSH)
@@ -194,8 +221,8 @@ ITOA_PUSH:
     test r10,-1             ; test sign bit
     je   ITOA_NOW_POSITIVE  ; if not set, then already positive
     ; otherwise
-    not  rax                ; flip low  quad words (1s' complement)
-    not  rdx                ; flip high quad words (1s' complement)
+    not  rax                ; flip low  quad word (1s' complement)
+    not  rdx                ; flip high quad word (1s' complement)
     add  rax,1              ; increment for 2s' complement
     adc  rdx,0              ; carry     for 2s' complement
 ; upon reaching this label, (rdx:rax) is positive, with sign in r10
@@ -217,6 +244,7 @@ ITOA_STORE_DIGIT:
     inc  r8                     ; count digits so far
     test rax,-1                 ; if (!quotient)
     je   ITOA_DIVIDE_INT_END    ; then break
+    ; C equivalent: SIGN128(rdx, rax);
     call SIGN128                ; extend sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
@@ -299,7 +327,8 @@ section .data
 ;   0 - calculator
 ;   1 - test STRREV string reverser
 ;   2 - test itoa (integer to ASCII) for printing integers
-PROGRAM_MODE:   equ 2
+;   3 - test atoi (ASCII to integer) for parse and echo
+PROGRAM_MODE:   equ 3
 ; string to be reversed
 REV_TEST:       db "Hello world!"
 ; length of REV_TEST
@@ -315,6 +344,9 @@ ITOA_TEST:      dq 365,42,250,-1760
 ; ($ - ITOA_TEST) gives bytes,
 ; but each integer is a quad word = 8 bytes
 ITOA_LEN:       equ (($ - ITOA_TEST)/8)
+; prompt for user to enter integer
+ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
+ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
