@@ -3,7 +3,7 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
-;   v2.6.0 - 2022-06-21t20:58Q
+;   v2.6.0 - 2022-06-21t23:13Q
 ;       handling sign of integers
 ;
 ;   v2.5.0 - 2022-06-21t20:58Q
