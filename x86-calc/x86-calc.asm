@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.8.0 - 2022-06-22t01:50Q
+;       any radix for ITOA
+;
 ;   v2.7.0 - 2022-06-22t01:24Q
 ;       fixed ITOA string order
 ;
@@ -188,7 +191,15 @@ ITOA_NOW_POSITIVE:
 ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
-    or   rdx,'0'                ; convert modulo to digit character
+    cmp  rdx,9                  ; can modulo be a single numeric digit?
+    jle  ITOA_NUMERIC           ; if so, go to numeric
+ITOA_ALPHA:
+    sub  rdx,9                  ; how many digits after 9?
+    or   rdx,'@'                ; set modulo to alpha digit
+    jmp  ITOA_STORE_DIGIT       ; skip numeric
+ITOA_NUMERIC:
+    or   rdx,'0'                ; convert modulo to numeric digit
+ITOA_STORE_DIGIT:
     mov  [r9],rdx               ; store the digit
     inc  r8                     ; count digits so far
     inc  r9                     ; next destination address
