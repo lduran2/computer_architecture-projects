@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.1.2 - 2022-06-22t13:37Q
+;       mock ATOI=0, fixed string rep to print
+;
 ;   v3.1.1 - 2022-06-22t13:21Q
 ;       setting up calls needed for TEST_ATOI
 ;
@@ -126,19 +129,19 @@ CALC:
 TEST_ATOI:
     ; C equivalent: write(1, ECHO_PROMPT, ECHO_PROMPT_LEN);
     ; print the prompt to standard output
-    mov rax, 1          ; system call to perform: sys_write
-    mov rdi, 1          ; file descriptor to which to print, namely:
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
-    mov rsi, ECHO_PROMPT        ; prompt to print
-    mov rdx, ECHO_PROMPT_LEN    ; length of the prompt
+    mov  rsi,ECHO_PROMPT         ; prompt to print
+    mov  rdx,ECHO_PROMPT_LEN     ; length of the prompt
     syscall     ; execute the system call
     ; C equivalent: read(0, ECHO_IN, INT_LEN);
     ; accept user input into ECHO_IN
-    mov rax, 0          ; system call to perform: sys_read
-    mov rdi, 0          ; file descriptor to which to print, namely:
+    mov  rax,0          ; system call to perform: sys_read
+    mov  rdi,0          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
-    mov rsi, ECHO_IN    ; buffer address for storage
-    mov rdx, INT_LEN    ; acceptable buffer length
+    mov  rsi,ECHO_IN    ; buffer address for storage
+    mov  rdx,INT_LEN    ; acceptable buffer length
     syscall     ; execute the system call
     ; C equivalent: ATOI(&rdi, RADIX, ECHO_IN)
     mov  rsi,RADIX              ; set radix
@@ -147,13 +150,14 @@ TEST_ATOI:
     ; C equivalent: SIGN128(&rdx, rdi);
     mov  rax,rdi                ; copy the parsed integer into rax
     call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(ECHO_DST, RADIX, rdx, rax);
+    ; C equivalent: ITOA(ECHO_DST, RADIX, &rdx, rax);
     mov  rdi,ECHO_DST           ; set the result address
     call ITOA                   ; convert to a string
     ; C equivalent: write(1, ECHO_DST, rdx);
-    ; print the input directly
-    mov rax, 1          ; system call to perform: sys_write
-    mov rdi, 1          ; file descriptor to which to print, namely:
+    ; print the string representation of the integer
+    mov  rsi,rdi        ; move the string representation to print
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
     syscall     ; execute the system call
 ;    jmp  TEST_ATOI      ; repeat infinitely
@@ -170,7 +174,7 @@ TEST_ITOA_TEST_LOOP:
     ; C equivalent: SIGN128(&rdx, *r8);
     mov  rax,[r8]               ; get the current number
     call SIGN128                ; extend sign bit
-    ; C equivalent: ITOA(ITOA_TEST_DST, RADIX, rdx, *r8);
+    ; C equivalent: ITOA(ITOA_TEST_DST, RADIX, &rdx, *r8);
     mov  rdi,ITOA_TEST_DST      ; set result address
     mov  rsi,RADIX              ; set radix
     call ITOA                   ; convert to a string
@@ -228,11 +232,12 @@ TEST_STRREV:
 ; @param
 ;   rax : in  char * = string representation of the integer to parse
 ATOI:
+    mov rdi,0
     ret
 ; end ATOI
 
 
-; ITOA(char *rdi, int rsi, int rdx, int rax)
+; ITOA(char *rdi, int rsi, int *rdx, int rax)
 ; Integer TO Ascii
 ; converts an integer into an ASCII string representation.
 ; @param
@@ -241,8 +246,8 @@ ATOI:
 ;   rsi : int = radix of the integer
 ; @param
 ;   rdx :
-;       in  int = upper quad word of integer to convert
-;       out int = length of string converted from integer
+;       in  int * = upper quad word of integer to convert
+;       out int * = length of string converted from integer
 ; @param
 ;   rax : int = lower quad word of integer to convert
 ITOA:
