@@ -3,6 +3,15 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.8.0 - 2022-06-22t01:50Q
+;       any radix for ITOA
+;
+;   v2.7.0 - 2022-06-22t01:24Q
+;       fixed ITOA string order
+;
+;   v2.6.0 - 2022-06-21t23:13Q
+;       handling sign of integers
+;
 ;   v2.5.0 - 2022-06-21t20:58Q
 ;       backwards ITOA for ints{+}
 ;
@@ -28,6 +37,9 @@
 ;
 ;   v2.0.0 - 2022-06-16t17:42Q
 ;       ready to print ITOA demos
+;
+;   v1.3.0 - 2022-06-22t00:28Q
+;       reverser can now be out of place
 ;
 ;   v1.2.0 - 2022-06-16t02:31Q
 ;       demos for ITOA
@@ -108,9 +120,6 @@ TEST_ITOA_TEST_LOOP:
     ; C equivalent: write(1, ITOA_TEST_DST, rdx);
     ; print the last number converted
     mov  rsi,rdi                ; move result string address to print
-;    mov  rsi,REV_TEST                ; move result string address to print
-;    mov  rdx,REV_LEN                ; move result string address to print
-    
     ; the length is already ready from ITOA
     mov  rax,1                  ; system call to perform: sys_write
     mov  rdi,1                  ; file descriptor to which to print,
@@ -133,11 +142,13 @@ TEST_ITOA_TEST_END:
 ; Test the STRREV function on REV_TEST.
 TEST_STRREV:
     ; C equivalent: STRREV(REV_TEST, REV_LEN);
-    mov  rsi,REV_TEST   ; reversed string to print
+    mov  rdi,REV_TEST_DST   ; addres to place reversed string
+    mov  rsi,REV_TEST   ; string to reverse
     mov  rdx,REV_LEN    ; length of the string to print
     call STRREV         ; reverse the string
     ; C equivalent: write(1, REV_TEST, REV_LEN);
     ; print the reversed string to standard output
+    mov  rsi,REV_TEST_DST   ; print the reversed string
     mov  rax,1          ; system call to perform: sys_write
     mov  rdi,1          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
@@ -155,20 +166,40 @@ TEST_STRREV:
 ; @param
 ;   rdi : out char * = string converted from integer
 ; @param
-;   rsi : out int = radix of the integer
+;   rsi : int = radix of the integer
 ; @param
 ;   (rdx:rax) : in  int128_t = integer to convert
 ;   rdx       : out int      = length of string converted from integer
 ITOA:
     push r8             ; backup general purpose r8 for digit count
     push r9             ; backup general purpose r9 for current address
+    push r10            ; backup general purpose r10 for sign register
     mov  r8,0           ; clear digit count
     mov  r9,rdi         ; initialize the destination address
+    mov  r10,rax            ; copy low bits into sign register
+    sar  r10,63             ; shift sign bit through sign register
+    test r10,-1             ; test sign bit
+    je   ITOA_NOW_POSITIVE  ; if not set, then already positive
+    ; otherwise
+    not  rax                ; flip low  quad words (1s' complement)
+    not  rdx                ; flip high quad words (1s' complement)
+    add  rax,1              ; increment for 2s' complement
+    adc  rdx,0              ; carry     for 2s' complement
+; upon reaching this label, (rdx:rax) is positive, with sign in r10
+ITOA_NOW_POSITIVE:
 ; loop while dividing (rdx:rax) by radix (rsi)
 ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
-    or  rdx,'0'                 ; convert modulo to digit character
+    cmp  rdx,9                  ; can modulo be a single numeric digit?
+    jle  ITOA_NUMERIC           ; if so, go to numeric
+ITOA_ALPHA:
+    sub  rdx,9                  ; how many digits after 9?
+    or   rdx,'@'                ; set modulo to alpha digit
+    jmp  ITOA_STORE_DIGIT       ; skip numeric
+ITOA_NUMERIC:
+    or   rdx,'0'                ; convert modulo to numeric digit
+ITOA_STORE_DIGIT:
     mov  [r9],rdx               ; store the digit
     inc  r8                     ; count digits so far
     inc  r9                     ; next destination address
@@ -177,7 +208,19 @@ ITOA_DIVIDE_INT_LOOP:
     call SIGN128                ; extend sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
+    test r10,-1             ; test sign bit
+    je   ITOA_CLEANUP       ; if not set, skip adding '-'
+    inc  r8                 ; extra character for '-'
+    mov  rdx,'-'            ; set the '-'
+    mov  [r9],rdx           ; append '-'
+; reverses the string and does cleanup
+ITOA_CLEANUP:
+    push rsi            ; backup the radix
+    mov  rsi,rdi        ; use the string so far as the source
     mov  rdx,r8         ; store string length
+    call STRREV         ; reverse the (backwards) string
+    pop  rsi            ; restore the radix
+    pop  r10            ; restore general purpose
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
     ret
@@ -198,36 +241,42 @@ SIGN128:
 ; end SIGN128
 
 
-; STRREV(char *rsi, int rsi)
-; Reverses a string using the stack in place.
+; STRREV(char *rdi, char *rsi, int rdx)
+; Reverses a string in rsi using the stack and places it in rdi.
+;
+; It can be that (rdi==rsi), in which case this is an in-place
+; operation.
+;
 ; @param
-;   rsi : 
-;       in  char * = the string to reverse
-;       out char * = the reversed string
+;   rdi : out char * = the reversed string
 ; @param
-;   rsi : int = length of string to reverse
+;   rsi : in  char * = the string to reverse
+; @param
+;   rdx : int = length of string to reverse
 STRREV:
     push rcx            ; backup counter
-    push r8             ; backup general purpose r8 for string address
+    push r8             ; backup general purpose r8 for source address
     push r9             ; backup general purpose r9 for character
+    push r10            ; backup general purpose r10 for sink address
     mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rsi         ; initialize the string address
+    mov  r8,rsi         ; initialize the source address
+    mov  r10,rdi        ; initialize the sink address
 ; push each character onto the stack
 STRREV_PUSH_LOOP:
     mov  r9,[r8]            ; copy the character
     push r9                 ; push it onto stack
-    inc  r8                 ; next character
+    inc  r8                 ; next character in source
     loop STRREV_PUSH_LOOP   ; repeat
 STRREV_PUSH_END:
     mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rsi         ; initialize the string address
 ; pop each character off the stack
 STRREV_POP_LOOP:
     pop  r9                 ; pop the character
-    mov  [r8],r9            ; place the character in the string
-    inc  r8                 ; next character
+    mov  [r10],r9           ; place the character in the sink
+    inc  r10                ; next character in sink
     loop STRREV_POP_LOOP    ; repeat
 STRREV_POP_END:
+    pop  r10            ; restore general purpose
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
@@ -263,6 +312,8 @@ ITOA_LEN:       equ (($ - ITOA_TEST)/8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
 section .bss
+; allocate space for reverser test results
+REV_TEST_DST:  times REV_LEN resb 0
 ; allow 21 bytes for result of ITOA test (20 digits + sign)
 ITOA_TEST_DST:  resb 21
 
