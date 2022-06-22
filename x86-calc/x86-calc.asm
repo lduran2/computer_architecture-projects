@@ -3,11 +3,14 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.5.0 - 2022-06-21t20:58Q
+;       backwards ITOA for ints{+}
+;
 ;   v2.4.0 - 2022-06-21t19:40Q
 ;       optimized ITOA_DIVIDE_INT_LOOP: test quotient, not cmp
 ;
 ;   v2.3.2 - 2022-06-21t19:44Q
-;       proper handling of sign bit
+;       proper handling of sign bit in ITOA
 ;
 ;   v2.3.1 - 2022-06-21t04:39Q
 ;       counting digits (< 10)
@@ -97,23 +100,27 @@ TEST_ITOA:
     mov  rcx,ITOA_LEN   ; number of integers to test
 ; run each test
 TEST_ITOA_TEST_LOOP:
+    mov  rdi,ITOA_TEST_DST      ; set result address
     mov  rsi,RADIX              ; set radix
     mov  rax,[r8]               ; get the current number
-    ; copy sign bit
-    mov  rdx,rax                ; copy low bits into high bits
-    sar  rdx,63                 ; shift sign bit through rdx
-    ; done copying sign bit
+    call SIGN128                ; extend sign bit
     call ITOA                   ; convert to a string
-    or   rdx,'0'                ; convert count to character
-    mov  [N_DIGITS],rdx         ; store in N_DIGITS
-    ; C equivalent: write(1, N_DIGITS, 1);
+    ; C equivalent: write(1, ITOA_TEST_DST, rdx);
     ; print the last number converted
-    mov  rsi,N_DIGITS           ; to print
-    mov  rdx,1                  ; 1st digit of digit count
+    mov  rsi,rdi                ; move result string address to print
+;    mov  rsi,REV_TEST                ; move result string address to print
+;    mov  rdx,REV_LEN                ; move result string address to print
+    
+    ; the length is already ready from ITOA
     mov  rax,1                  ; system call to perform: sys_write
     mov  rdi,1                  ; file descriptor to which to print,
                                 ; namely: STDOUT (standard output)
     push rcx            ; guard from write changing rcx
+    syscall             ; execute the system call
+    ; C equivalent: write(1, ENDL, 1);
+    mov  rsi,ENDL       ; newline to print
+    mov  rdx,1          ; 1 character to print
+    mov  rax,1          ; system call to perform: sys_write
     syscall             ; execute the system call
     pop  rcx            ; restore rcx
     add  r8,8                   ; next integer
@@ -143,7 +150,7 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
-; ITOA(char *rdi, int rsi, int (rdx:rax))
+; ITOA(char *rdi, int rsi, int128_t (rdx:rax))
 ; Converts an integer to ASCII.
 ; @param
 ;   rdi : out char * = string converted from integer
@@ -154,24 +161,41 @@ TEST_STRREV:
 ;   rdx       : out int      = length of string converted from integer
 ITOA:
     push r8             ; backup general purpose r8 for digit count
+    push r9             ; backup general purpose r9 for current address
     mov  r8,0           ; clear digit count
+    mov  r9,rdi         ; initialize the destination address
 ; loop while dividing (rdx:rax) by radix (rsi)
 ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
+    or  rdx,'0'                 ; convert modulo to digit character
+    mov  [r9],rdx               ; store the digit
     inc  r8                     ; count digits so far
+    inc  r9                     ; next destination address
     test rax,-1                 ; if (!quotient)
     je   ITOA_DIVIDE_INT_END    ; then break
-    ; copy sign bit
-    mov  rdx,rax                ; copy low bits into high bits
-    sar  rdx,63                 ; shift sign bit through rdx
-    ; done copying sign bit
+    call SIGN128                ; extend sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
     mov  rdx,r8         ; store string length
+    pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
     ret
 ; end ITOA
+
+
+; SIGN128(int *rdx, int rax)
+; Copy the sign bit bit from rax over to rdx.
+; @param
+;   rdx : int * = pointer to higher quad word
+; @param
+;   rax : int   = lower  quad word
+SIGN128:
+    mov  rdx,rax                ; copy low bits into high bits
+    sar  rdx,63                 ; shift sign bit through rdx
+    ; done copying sign bit
+    ret
+; end SIGN128
 
 
 ; STRREV(char *rsi, int rsi)
@@ -239,6 +263,6 @@ ITOA_LEN:       equ (($ - ITOA_TEST)/8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
 section .bss
-; allow 1 byte for the digit length
-N_DIGITS:      resb 1
+; allow 21 bytes for result of ITOA test (20 digits + sign)
+ITOA_TEST_DST:  resb 21
 
