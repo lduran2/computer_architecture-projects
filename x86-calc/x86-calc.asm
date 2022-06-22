@@ -7,7 +7,7 @@
 ;       ITOA pushes digits, inlines STRREV_POP_INIT
 ;
 ;   v2.8.0 - 2022-06-22t01:50Q
-;       any radix for ITOA
+;       any positive radix for ITOA
 ;
 ;   v2.7.0 - 2022-06-22t01:24Q
 ;       fixed ITOA string order
@@ -225,11 +225,11 @@ ITOA_DIVIDE_INT_END:
     inc  r8                 ; extra character for '-'
     mov  rdx,'-'            ; set the '-'
     push rdx                ; append '-'
-; reverse the string
+; reverse the string of digits
 ITOA_CLEANUP:
     mov  rsi,rdi        ; use the string so far as the source
     mov  rdx,r8         ; store string length
-    jmp  STRREV_POP_INIT    ; reverse the (backwards) string
+    jmp  STRREV_POP_INIT    ; pop digits off the stack onto rdi
 ; end ITOA
 
 
