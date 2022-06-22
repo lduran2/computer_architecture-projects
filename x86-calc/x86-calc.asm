@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.7.0 - 2022-06-22t01:24Q
+;       fixed ITOA string order
+;
 ;   v2.6.0 - 2022-06-21t23:13Q
 ;       handling sign of integers
 ;
@@ -160,7 +163,7 @@ TEST_STRREV:
 ; @param
 ;   rdi : out char * = string converted from integer
 ; @param
-;   rsi : out int = radix of the integer
+;   rsi : int = radix of the integer
 ; @param
 ;   (rdx:rax) : in  int128_t = integer to convert
 ;   rdx       : out int      = length of string converted from integer
@@ -199,8 +202,13 @@ ITOA_DIVIDE_INT_END:
     inc  r8                 ; extra character for '-'
     mov  rdx,'-'            ; set the '-'
     mov  [r9],rdx           ; append '-'
+; reverses the string and does cleanup
 ITOA_CLEANUP:
+    push rsi            ; backup the radix
+    mov  rsi,rdi        ; use the string so far as the source
     mov  rdx,r8         ; store string length
+    call STRREV         ; reverse the (backwards) string
+    pop  rsi            ; restore the radix
     pop  r10            ; restore general purpose
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
