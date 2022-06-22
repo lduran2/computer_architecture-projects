@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.1.6 - 2022-06-22t19:10Q
+;       different radix for I/P, O/P
+;
 ;   v3.1.5 - 2022-06-22t19:10Q
 ;       ATOI digit placing
 ;
@@ -156,15 +159,16 @@ TEST_ATOI:
     mov  rsi,ECHO_IN    ; buffer address for storage
     mov  rdx,INT_LEN    ; acceptable buffer length
     syscall     ; execute the system call
-    ; C equivalent: ATOI(&rdi, RADIX, INT_LEN, ECHO_IN)
-    mov  rsi,RADIX              ; set radix
+    ; C equivalent: ATOI(&rdi, IP_RADIX, INT_LEN, ECHO_IN)
+    mov  rsi,IP_RADIX           ; set radix
     mov  rax,ECHO_IN            ; parse from ECHO_IN
     call ATOI
     ; C equivalent: SIGN128(&rdx, rdi);
     mov  rax,rdi                ; copy the parsed integer into rax
     call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(ECHO_DST, RADIX, &rdx, rax);
+    ; C equivalent: ITOA(ECHO_DST, OP_RADIX, &rdx, rax);
     mov  rdi,ECHO_DST           ; set the result address
+    mov  rsi,OP_RADIX           ; set radix
     call ITOA                   ; convert to a string
     ; C equivalent: write(1, ECHO_DST, rdx);
     ; print the string representation of the integer
@@ -187,9 +191,9 @@ TEST_ITOA_TEST_LOOP:
     ; C equivalent: SIGN128(&rdx, *r8);
     mov  rax,[r8]               ; get the current number
     call SIGN128                ; extend sign bit
-    ; C equivalent: ITOA(ITOA_TEST_DST, RADIX, &rdx, *r8);
+    ; C equivalent: ITOA(ITOA_TEST_DST, IP_RADIX, &rdx, *r8);
     mov  rdi,ITOA_TEST_DST      ; set result address
-    mov  rsi,RADIX              ; set radix
+    mov  rsi,IP_RADIX           ; set radix
     call ITOA                   ; convert to a string
     ; C equivalent: write(1, ITOA_TEST_DST, rdx);
     ; print the last number converted
@@ -428,8 +432,10 @@ REV_TEST:       db "Hello world!"
 REV_LEN:        equ ($ - REV_TEST)
 ; newline character
 ENDL:           db 0ah
-; radix (default decimal numbers)
-RADIX:          equ 10
+; radix for  input (defaults to decimal numbers)
+IP_RADIX:          equ 10
+; radix for output (defaults to decimal numbers)
+OP_RADIX:          equ 10
 ; array of integers to print
 ; (quad word, 64-bits)
 ITOA_TEST:      dq 365,42,250,-1760
