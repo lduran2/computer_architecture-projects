@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.1.1 - 2022-06-22t13:21Q
+;       setting up calls needed for TEST_ATOI
+;
 ;   v3.1.0 - 2022-06-22t03:26Q
 ;       just printing input with no processing
 ;
@@ -137,7 +140,17 @@ TEST_ATOI:
     mov rsi, ECHO_IN    ; buffer address for storage
     mov rdx, INT_LEN    ; acceptable buffer length
     syscall     ; execute the system call
-    ; C equivalent: write(1, ECHO_IN, INT_LEN);
+    ; C equivalent: ATOI(&rdi, RADIX, ECHO_IN)
+    mov  rsi,RADIX              ; set radix
+    mov  rax,ECHO_IN            ; parse from ECHO_IN
+    call ATOI
+    ; C equivalent: SIGN128(&rdx, rdi);
+    mov  rax,rdi                ; copy the parsed integer into rax
+    call SIGN128                ; extend the sign bit
+    ; C equivalent: ITOA(ECHO_DST, RADIX, rdx, rax);
+    mov  rdi,ECHO_DST           ; set the result address
+    call ITOA                   ; convert to a string
+    ; C equivalent: write(1, ECHO_DST, rdx);
     ; print the input directly
     mov rax, 1          ; system call to perform: sys_write
     mov rdi, 1          ; file descriptor to which to print, namely:
@@ -154,7 +167,7 @@ TEST_ITOA:
     mov  rcx,ITOA_LEN   ; number of integers to test
 ; run each test
 TEST_ITOA_TEST_LOOP:
-    ; C equivalent: SIGN128(rdx, *r8);
+    ; C equivalent: SIGN128(&rdx, *r8);
     mov  rax,[r8]               ; get the current number
     call SIGN128                ; extend sign bit
     ; C equivalent: ITOA(ITOA_TEST_DST, RADIX, rdx, *r8);
@@ -205,9 +218,23 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
+; ATOI(int *rdi, int rsi, char *rax)
+; Ascii TO Integer
+; parses an integer from its ASCII string representation.
+; @param
+;   rdi : out int * = pointer to the integer
+; @param
+;   rsi : int = radix of the integer
+; @param
+;   rax : in  char * = string representation of the integer to parse
+ATOI:
+    ret
+; end ATOI
+
+
 ; ITOA(char *rdi, int rsi, int rdx, int rax)
 ; Integer TO Ascii
-; converts an integer to ASCII.
+; converts an integer into an ASCII string representation.
 ; @param
 ;   rdi : out char * = string converted from integer
 ; @param
@@ -217,16 +244,17 @@ TEST_STRREV:
 ;       in  int = upper quad word of integer to convert
 ;       out int = length of string converted from integer
 ; @param
-;   rax : in  int = lower quad word of integer to convert
+;   rax : int = lower quad word of integer to convert
 ITOA:
     ; safeguard the radix
     push rsi            ; backup radix (replaced in ITOA_PUSH)
-    call ITOA_PUSH      ; call the inlined version
+    call ITOA_IMPL      ; call the implementation
     pop  rsi            ; restore radix
     ret
 ; push the digits of the integer onto stack
-; the digits will be backwards
-ITOA_PUSH:
+; The digits will be backwards.
+; Then inline STRREV_POP_INIT.
+ITOA_IMPL:
     push rcx            ; for STRREV: backup counter
     push r8             ; backup general purpose r8 for digit count
     push r9             ; for STRREV: backup general purpose r9
@@ -245,6 +273,7 @@ ITOA_PUSH:
 ; upon reaching this label, (rdx:rax) is positive, with sign in r10
 ITOA_NOW_POSITIVE:
 ; loop while dividing (rdx:rax) by radix (rsi)
+; and pushing each digit onto the stack
 ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
@@ -261,7 +290,7 @@ ITOA_STORE_DIGIT:
     inc  r8                     ; count digits so far
     test rax,-1                 ; if (!quotient)
     je   ITOA_DIVIDE_INT_END    ; then break
-    ; C equivalent: SIGN128(rdx, rax);
+    ; C equivalent: SIGN128(&rdx, rax);
     call SIGN128                ; extend sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
