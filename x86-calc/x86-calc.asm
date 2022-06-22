@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.6.0 - 2022-06-21t20:58Q
+;       handling sign of integers
+;
 ;   v2.5.0 - 2022-06-21t20:58Q
 ;       backwards ITOA for ints{+}
 ;
@@ -108,9 +111,6 @@ TEST_ITOA_TEST_LOOP:
     ; C equivalent: write(1, ITOA_TEST_DST, rdx);
     ; print the last number converted
     mov  rsi,rdi                ; move result string address to print
-;    mov  rsi,REV_TEST                ; move result string address to print
-;    mov  rdx,REV_LEN                ; move result string address to print
-    
     ; the length is already ready from ITOA
     mov  rax,1                  ; system call to perform: sys_write
     mov  rdi,1                  ; file descriptor to which to print,
@@ -162,13 +162,25 @@ TEST_STRREV:
 ITOA:
     push r8             ; backup general purpose r8 for digit count
     push r9             ; backup general purpose r9 for current address
+    push r10            ; backup general purpose r10 for sign register
     mov  r8,0           ; clear digit count
     mov  r9,rdi         ; initialize the destination address
+    mov  r10,rax            ; copy low bits into sign register
+    sar  r10,63             ; shift sign bit through sign register
+    test r10,-1             ; test sign bit
+    je   ITOA_NOW_POSITIVE  ; if not set, then already positive
+    ; otherwise
+    not  rax                ; flip low  quad words (1s' complement)
+    not  rdx                ; flip high quad words (1s' complement)
+    add  rax,1              ; increment for 2s' complement
+    adc  rdx,0              ; carry     for 2s' complement
+; upon reaching this label, (rdx:rax) is positive, with sign in r10
+ITOA_NOW_POSITIVE:
 ; loop while dividing (rdx:rax) by radix (rsi)
 ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
-    or  rdx,'0'                 ; convert modulo to digit character
+    or   rdx,'0'                ; convert modulo to digit character
     mov  [r9],rdx               ; store the digit
     inc  r8                     ; count digits so far
     inc  r9                     ; next destination address
@@ -177,7 +189,14 @@ ITOA_DIVIDE_INT_LOOP:
     call SIGN128                ; extend sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
+    test r10,-1             ; test sign bit
+    je   ITOA_CLEANUP       ; if not set, skip adding '-'
+    inc  r8                 ; extra character for '-'
+    mov  rdx,'-'            ; set the '-'
+    mov  [r9],rdx           ; append '-'
+ITOA_CLEANUP:
     mov  rdx,r8         ; store string length
+    pop  r10            ; restore general purpose
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
     ret
