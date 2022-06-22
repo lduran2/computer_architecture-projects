@@ -32,6 +32,9 @@
 ;   v2.0.0 - 2022-06-16t17:42Q
 ;       ready to print ITOA demos
 ;
+;   v1.3.0 - 2022-06-22t00:28Q
+;       reverser can now be out of place
+;
 ;   v1.2.0 - 2022-06-16t02:31Q
 ;       demos for ITOA
 ;
@@ -133,11 +136,13 @@ TEST_ITOA_TEST_END:
 ; Test the STRREV function on REV_TEST.
 TEST_STRREV:
     ; C equivalent: STRREV(REV_TEST, REV_LEN);
-    mov  rsi,REV_TEST   ; reversed string to print
+    mov  rdi,REV_TEST_DST   ; addres to place reversed string
+    mov  rsi,REV_TEST   ; string to reverse
     mov  rdx,REV_LEN    ; length of the string to print
     call STRREV         ; reverse the string
     ; C equivalent: write(1, REV_TEST, REV_LEN);
     ; print the reversed string to standard output
+    mov  rsi,REV_TEST_DST   ; print the reversed string
     mov  rax,1          ; system call to perform: sys_write
     mov  rdi,1          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
@@ -217,36 +222,42 @@ SIGN128:
 ; end SIGN128
 
 
-; STRREV(char *rsi, int rsi)
-; Reverses a string using the stack in place.
+; STRREV(char *rdi, char *rsi, int rdx)
+; Reverses a string in rsi using the stack and places it in rdi.
+;
+; It can be that (rdi==rsi), in which case this is an in-place
+; operation.
+;
 ; @param
-;   rsi : 
-;       in  char * = the string to reverse
-;       out char * = the reversed string
+;   rdi : out char * = the reversed string
 ; @param
-;   rsi : int = length of string to reverse
+;   rsi : in  char * = the string to reverse
+; @param
+;   rdx : int = length of string to reverse
 STRREV:
     push rcx            ; backup counter
-    push r8             ; backup general purpose r8 for string address
+    push r8             ; backup general purpose r8 for source address
     push r9             ; backup general purpose r9 for character
+    push r10            ; backup general purpose r10 for sink address
     mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rsi         ; initialize the string address
+    mov  r8,rsi         ; initialize the source address
+    mov  r10,rdi        ; initialize the sink address
 ; push each character onto the stack
 STRREV_PUSH_LOOP:
     mov  r9,[r8]            ; copy the character
     push r9                 ; push it onto stack
-    inc  r8                 ; next character
+    inc  r8                 ; next character in source
     loop STRREV_PUSH_LOOP   ; repeat
 STRREV_PUSH_END:
     mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rsi         ; initialize the string address
 ; pop each character off the stack
 STRREV_POP_LOOP:
     pop  r9                 ; pop the character
-    mov  [r8],r9            ; place the character in the string
-    inc  r8                 ; next character
+    mov  [r10],r9           ; place the character in the sink
+    inc  r10                ; next character in sink
     loop STRREV_POP_LOOP    ; repeat
 STRREV_POP_END:
+    pop  r10            ; restore general purpose
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
@@ -282,6 +293,8 @@ ITOA_LEN:       equ (($ - ITOA_TEST)/8)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
 section .bss
+; allocate space for reverser test results
+REV_TEST_DST:  times REV_LEN resb 0
 ; allow 21 bytes for result of ITOA test (20 digits + sign)
 ITOA_TEST_DST:  resb 21
 
