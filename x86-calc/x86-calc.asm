@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.1.5 - 2022-06-22t19:10Q
+;       ATOI digit placing
+;
 ;   v3.1.4 - 2022-06-22t18:40Q
 ;       ATOI = sum of digits
 ;       filtering out digits
@@ -254,17 +257,19 @@ ATOI_STR_LOOP:
     mov  r9,[r8]            ; copy the character
     and  r9,0x7F            ; ignore all non-ASCII data
     test r9,-1              ; if (null character),
-    je  ATOI_STR_END       ; then finish the loop
+    je  ATOI_STR_END        ; then finish the loop
+    ; otherwise
     test r9,'@'             ; can the character be a single numeric digit?
-    je  ATOI_NUMERIC       ; if so, go to numeric
+    je   ATOI_NUMERIC       ; if so, go to numeric
 ATOI_ALPHA:
-    and  r9,~'@'                 ; disable '@' bits for number value
+    and  r9,~'@'                ; disable '@' bits for integer value
     add  r9,9                   ; all alpha characters after '9'
-    jmp  ATOI_STORE_DIGIT       ; skip numeric
+    jmp  ATOI_ACC_DIGIT         ; skip numeric
 ATOI_NUMERIC:
-    and  r9,~'0'                 ; disable '0' bits for number value
-ATOI_STORE_DIGIT:
-    add  rdi,r9                 ; add the digit to the number
+    and  r9,~'0'                ; disable '0' bits for integer value
+ATOI_ACC_DIGIT:
+    imul rdi,rsi                ; multiply the sum by the radix
+    add  rdi,r9                 ; add the digit to the sum so far
     inc  r8                 ; next character in source
     loop ATOI_STR_LOOP      ; repeat
 ATOI_STR_END:
