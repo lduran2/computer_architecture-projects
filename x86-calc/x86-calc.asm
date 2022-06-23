@@ -447,6 +447,7 @@ ITOA_LEN:       equ (($ - ITOA_TEST)/8)
 INT_LEN:        equ 21
 ; prompt for user to enter integer
 ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
+; length of prompt
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
 
 
