@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.0 - 2022-06-23t19:35Q
+;       ATOI stops at first space character
+;
 ;   v3.1.6 - 2022-06-22t19:10Q
 ;       different radix for I/P, O/P
 ;
@@ -253,35 +256,71 @@ TEST_STRREV:
 ATOI:
     push rcx            ; backup counter
     push r8             ; backup general purpose r8 for source address
-    push r9             ; backup general purpose r9 for character
+    push r9             ; backup general purpose r9 for radix
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
     mov  r8,rax         ; initialize the source address
+    mov  r9,rsi         ; free rsi for use as the current character
+                        ; this makes isspace easier to use
 ATOI_STR_LOOP:
-    mov  r9,[r8]            ; copy the character
-    and  r9,0x7F            ; ignore all non-ASCII data
-    test r9,-1              ; if (null character),
+    mov  rsi,[r8]           ; copy the character
+    and  rsi,0x7F           ; ignore all non-ASCII data
+    test rsi,-1             ; if (null character, all bits reset),
+    je  ATOI_STR_END        ; then finish the loop
+    call ISSPACE            ; if (space character),
     je  ATOI_STR_END        ; then finish the loop
     ; otherwise
-    test r9,'@'             ; can the character be a single numeric digit?
+    test rsi,'@'            ; can the character be a single numeric digit?
     je   ATOI_NUMERIC       ; if so, go to numeric
 ATOI_ALPHA:
-    and  r9,~'@'                ; disable '@' bits for integer value
-    add  r9,9                   ; all alpha characters after '9'
+    and  rsi,~'@'               ; disable '@' bits for integer value
+    add  rsi,9                  ; all alpha characters after '9'
     jmp  ATOI_ACC_DIGIT         ; skip numeric
 ATOI_NUMERIC:
-    and  r9,~'0'                ; disable '0' bits for integer value
+    and  rsi,~'0'               ; disable '0' bits for integer value
 ATOI_ACC_DIGIT:
-    imul rdi,rsi                ; multiply the sum by the radix
-    add  rdi,r9                 ; add the digit to the sum so far
+    imul rdi,r9                 ; multiply the sum by the radix
+    add  rdi,rsi                ; add the digit to the sum so far
     inc  r8                 ; next character in source
     loop ATOI_STR_LOOP      ; repeat
 ATOI_STR_END:
+    mov  rsi,r9         ; restore radix
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
     ret
 ; end ATOI
+
+
+; ISSPACE(char rsi)
+; Sets the equals/zero flag ZF if rsi is a whitespace character.
+;
+; These are any of: space (20h), form-feed ('\f' or 0ch), newline ('\n'
+; or 0ah), carriage return ('\r' or 0dh), horizontal tab ('\t' or 09h),
+; and vertical tab ('\v' or 0bh), i.e. the range [09h, 0dh].
+;
+; @param
+;   rsi : char = character to test
+; @see https://linux.die.net/man/3/isspace
+ISSPACE:
+    push r8             ; backup general purpose r8 for inverse flag
+    cmp  rsi,0dh        ; check upper bound
+    jg   ISSPACE_GT     ; if greater, check for 20h
+    cmp  rsi,09h        ; check lower bound
+    jl   ISSPACE_FALSE  ; not whitespace if less
+ISSPACE_TRUE:
+    mov  r8,0           ; set inverse to false
+    jmp  ISSPACE_CHECKED    ; finished checking
+ISSPACE_GT:
+    cmp  rsi,20h        ; if (space),
+    je  ISSPACE_TRUE    ; then space character
+ISSPACE_FALSE:
+    mov  r8,-1          ; set inverse to true
+ISSPACE_CHECKED:
+    test r8,-1          ; test the inverse, setting ZF accordingly
+    pop  r8             ; restore general purpose
+    ret
+; end ISSPACE
 
 
 ; ITOA(char *rdi, int rsi, int *rdx, int rax)
