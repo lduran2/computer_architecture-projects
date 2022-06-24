@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.1 - 2022-06-23t21:01Q
+;       abstracted ATOI_SEEK, PROMPT_INPUT
+;
 ;   v3.2.0 - 2022-06-23t19:35Q
 ;       ATOI stops at first space character
 ;
@@ -146,22 +149,16 @@ CALC:
 
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
-    ; C equivalent: write(1, ECHO_PROMPT, ECHO_PROMPT_LEN);
-    ; print the prompt to standard output
-    mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
-    mov  rsi,ECHO_PROMPT         ; prompt to print
-    mov  rdx,ECHO_PROMPT_LEN     ; length of the prompt
-    syscall     ; execute the system call
-    ; C equivalent: read(0, ECHO_IN, INT_LEN);
-    ; accept user input into ECHO_IN
-    mov  rax,0          ; system call to perform: sys_read
-    mov  rdi,0          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
-    mov  rsi,ECHO_IN    ; buffer address for storage
-    mov  rdx,INT_LEN    ; acceptable buffer length
-    syscall     ; execute the system call
+    mov rcx,2           ; count 2 times
+TEST_ATOI_LOOP:
+    push rcx            ; guard from write changing rcx
+    ; C equivalent:
+    ;   PROMPT_INPUT(ECHO_IN, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
+    mov  rdi,ECHO_IN            ; buffer address for storage
+    mov  rdx,INT_LEN            ; acceptable buffer length
+    mov  rsi,ECHO_PROMPT        ; prompt to print
+    mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
+    call PROMPT_INPUT           ; prompt for and accept integer to echo
     ; C equivalent: ATOI(&rdi, IP_RADIX, INT_LEN, ECHO_IN)
     mov  rsi,IP_RADIX           ; set radix
     mov  rax,ECHO_IN            ; parse from ECHO_IN
@@ -180,6 +177,13 @@ TEST_ATOI:
     mov  rdi,1          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
     syscall     ; execute the system call
+    ; C equivalent: write(1, ENDL, 1);
+    mov  rsi,ENDL       ; newline to print
+    mov  rdx,1          ; 1 character to print
+    mov  rax,1          ; system call to perform: sys_write
+    syscall             ; execute the system call
+    pop  rcx            ; restore rcx
+    loop TEST_ATOI_LOOP ; repeat until (rcx==0)
 ;    jmp  TEST_ATOI      ; repeat infinitely
     ret
 ; end TEST_ATOI
@@ -214,7 +218,7 @@ TEST_ITOA_TEST_LOOP:
     syscall             ; execute the system call
     pop  rcx            ; restore rcx
     add  r8,8                   ; next integer
-   loop TEST_ITOA_TEST_LOOP    ; repeat
+    loop TEST_ITOA_TEST_LOOP    ; repeat
 TEST_ITOA_TEST_END:
     ret
 ; end TEST_ITOA
@@ -242,6 +246,57 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
+; PROMPT_INPUT(char *rdi, char *rsi, int rdx, int rcx)
+; Displays a prompt, then accepts input.
+; @param
+;   rdi : out char * = address to buffer accepting input
+; @param
+;   rsi : in  char * = address to prompt to print
+; @param
+;   rdx : int = maximum length of input
+; @param
+;   rcx : int = exact length of output
+PROMPT_INPUT:
+    ; preparation
+    push rcx            ; guard from syscall changing rcx
+    push rax            ; backup to hold the system call
+    push rsi            ; backup to be replaced by rdi
+    push r8             ; backup general purpose r8 for input buffer
+    push r9             ; backup general purpose r9 for input length
+    mov  r8,rdi         ; backup input buffer address
+    mov  r9,rdx         ; backup input buffer length
+    ; C equivalent: write(1, rsi, rcx);
+    ; print the prompt to standard output
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    ; prompt is alread at rsi
+    mov  rdx,rcx        ; length of the prompt
+    syscall     ; execute the system call
+    ; C equivalent: read(0, r8, r9);
+    ; accept user input into r8
+    mov  rax,0          ; system call to perform: sys_read
+    mov  rdi,0          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    mov  rsi,r8         ; buffer address for storage
+    mov  rdx,r9         ; acceptable buffer length
+    syscall     ; execute the system call
+    ; clean up
+    mov  rdi,r8         ; restore input buffer address
+    mov  rdx,r9         ; restore input buffer length
+    pop  r9             ; restore general purpose
+    pop  r8             ; restore general purpose
+    pop  rsi            ; restore prompt address
+    pop  rax            ; restore rax
+    pop  rcx            ; guard from syscall changing rcx
+    ret
+; end PROMPT_INPUT
+
+
+; WRITE_LINE(char *rsi, int rdx)
+WRITE_LINE:
+
+
 ; ATOI(int *rdi, int rsi, int rdx, char *rax)
 ; Ascii TO Integer
 ; parses an integer from its ASCII string representation.
@@ -254,16 +309,27 @@ TEST_STRREV:
 ; @param
 ;   rax : in  char * = string representation of the integer to parse
 ATOI:
-    push rcx            ; backup counter
+    push rax            ; backup address of string representation
+    call ATOI_SEEK      ; all the seeking algorithm
+    pop  rax            ; restore the address of string representation
+    ret
+; end ATOI
+
+
+; ATOI_SEEK(int *rdi, int rsi, int rdx, char *rax)
+; Seeking implementation of ATOI.
+; After this runs, rax will be the address of the next whitespace or
+; null character.
+; @see #ATOI
+ATOI_SEEK:
     push r8             ; backup general purpose r8 for source address
     push r9             ; backup general purpose r9 for radix
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rax         ; initialize the source address
     mov  r9,rsi         ; free rsi for use as the current character
                         ; this makes isspace easier to use
 ATOI_STR_LOOP:
-    mov  rsi,[r8]           ; copy the character
+    mov  rsi,[rax]          ; copy the character
     and  rsi,0x7F           ; ignore all non-ASCII data
     test rsi,-1             ; if (null character, all bits reset),
     je  ATOI_STR_END        ; then finish the loop
@@ -281,15 +347,14 @@ ATOI_NUMERIC:
 ATOI_ACC_DIGIT:
     imul rdi,r9                 ; multiply the sum by the radix
     add  rdi,rsi                ; add the digit to the sum so far
-    inc  r8                 ; next character in source
+    inc  rax                ; next character in source
     loop ATOI_STR_LOOP      ; repeat
 ATOI_STR_END:
     mov  rsi,r9         ; restore radix
     pop  r9             ; restore general purpose
-    pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
     ret
-; end ATOI
+; end ATOI_SEEK
 
 
 ; ISSPACE(char rsi)
