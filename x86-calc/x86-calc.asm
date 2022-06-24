@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.4 - 2022-06-24t18:34Q
+;       implemented character seeking
+;
 ;   v3.2.3 - 2022-06-24t15:57Q
 ;       running input address for ATOI
 ;
@@ -183,7 +186,10 @@ TEST_ATOI_LOOP_DIGIT:
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
     pop  rcx            ; restore rcx
-    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi)
+    ; C equivalent: SEEKNE(&rdi, &ISSPACE);
+    mov  rax,ISSPACE            ; use ISSPACE for seeking
+    call SEEKNE                 ; find first non-space character
+    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
     mov  rax,rdi                ; parse from ECHO_IN
     call ATOI_SEEK
@@ -328,24 +334,26 @@ PROMPT_INPUT:
 ; end PROMPT_INPUT
 
 
-; SEEKNE(char **rsi, void (*rax)(char))
+; SEEKNE(char **rdi, void (*rax)(char rsi))
 ; SEEK Not Equal
-; seeks in the string *rsi until the function rax does not set ZF.
+; seeks in the string *rdi until the function rax does not set ZF.
 ; @param
-;   rsi : char **= pointer to string to search
+;   rdi : char **= pointer to string to search
 ; @param
-;   rax : void (*)(char) = pointer to address of 
+;   rax : void (*)(char rsi) = pointer to address of 
 SEEKNE:
-    push r8             ; backup general purpose r8 for current character
+    push rsi            ; backup rsi for current character
 SEEKNE_LOOP:
-    mov  r8,[rsi]               ; get the next character
-    call rax                    ; check if a space
-    jne  SEEKNE_END             ; if not, then use as a digit
-    inc  rsi                    ; otherwise, move to the next character
-    jmp  SEEKNE_LOOP            ; repeat until not ZF
+    mov  rsi,[rdi]          ; get the next character
+    and  rsi,0x7F           ; ignore all non-ASCII data
+    call rax                ; check if a space
+    jne  SEEKNE_END         ; if not, then use as a digit
+    inc  rdi                ; otherwise, move to the next character
+    jmp  SEEKNE_LOOP        ; repeat until not ZF
 SEEKNE_END:
-    pop  r8             ; restore general purpose
+    pop  rsi            ; restore rsi
     ret
+; end SEEKNE
 
 
 ; ATOI(int *rdi, int rsi, int rdx, char *rax)
