@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.9.2 - 2022-06-24t01:38Q
+;       updated TEST_ITOA to use WRITELN
+;
 ;   v2.9.1 - 2022-06-22t13:47Q
 ;       just use high quad word for sign flag
 ;
@@ -126,26 +129,16 @@ TEST_ITOA:
 TEST_ITOA_TEST_LOOP:
     mov  rdi,ITOA_TEST_DST      ; set result address
     mov  rsi,RADIX              ; set radix
-    mov  rax,[r8]               ; get the current number
+    mov  rax,[r8]               ; get the current integer
     call SIGN128                ; extend sign bit
     call ITOA                   ; convert to a string
-    ; C equivalent: write(1, ITOA_TEST_DST, rdx);
-    ; print the last number converted
+    ; C equivalent: WRITELN(ITOA_TEST_DST, rdx);
+    ; print the last integer converted
     mov  rsi,rdi                ; move result string address to print
     ; the length is already ready from ITOA
-    mov  rax,1                  ; system call to perform: sys_write
-    mov  rdi,1                  ; file descriptor to which to print,
-                                ; namely: STDOUT (standard output)
-    push rcx            ; guard from write changing rcx
-    syscall             ; execute the system call
-    ; C equivalent: write(1, ENDL, 1);
-    mov  rsi,ENDL       ; newline to print
-    mov  rdx,1          ; 1 character to print
-    mov  rax,1          ; system call to perform: sys_write
-    syscall             ; execute the system call
-    pop  rcx            ; restore rcx
-    add  r8,8                   ; next integer
-   loop TEST_ITOA_TEST_LOOP    ; repeat
+    call WRITELN            ; print the string representation of the integer
+    add  r8,QWORD_SIZE          ; next integer
+    loop TEST_ITOA_TEST_LOOP    ; repeat
 TEST_ITOA_TEST_END:
     ret
 ; end TEST_ITOA
@@ -174,6 +167,7 @@ TEST_STRREV:
 ;   rdx : int = length of the string rsi
 WRITELN:
     ; set up
+    push rcx            ; guard from write changing rcx
     push rsi            ; backup the string to print
     push rdx            ; backup the size of the string
     push rax            ; backup to hold the system call
@@ -195,6 +189,7 @@ WRITELN:
     pop  rax            ; restore rax
     pop  rdx            ; restore the size of the string
     pop  rsi            ; restore the string to print
+    pop  rcx            ; restore rcx
     ret
 ; end WRITE_LINE
 
@@ -342,13 +337,15 @@ REV_LEN:        equ ($ - REV_TEST)
 ENDL:           db 0ah
 ; radix (default decimal numbers)
 RADIX:          equ 10
+; each integer is a quad word = 8 bytes
+QWORD_SIZE:     equ 8
 ; array of integers to print
 ; (quad word, 64-bits)
 ITOA_TEST:      dq 365,42,250,-1760
 ; number of integers to print
-; ($ - ITOA_TEST) gives bytes,
-; but each integer is a quad word = 8 bytes
-ITOA_LEN:       equ (($ - ITOA_TEST)/8)
+; ($ - ITOA_TEST) gives #bytes,
+; convert to #quad words
+ITOA_LEN:       equ (($ - ITOA_TEST)/QWORD_SIZE)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
