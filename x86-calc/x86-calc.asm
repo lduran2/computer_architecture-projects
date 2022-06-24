@@ -4,7 +4,7 @@
 ;
 ; CHANGELOG :
 ;   v3.2.3 - 2022-06-24t15:57Q
-;       ATOI keeps a running index of input address
+;       running input address for ATOI
 ;
 ;   v3.2.2 - 2022-06-24t02:06Q
 ;       updated TEST_ATOI to use WRITELN
@@ -167,6 +167,13 @@ TEST_ATOI:
     mov  rcx,2          ; count 2 times
     mov  r8,ECHO_IN     ; initialize running address of ECHO_IN
 TEST_ATOI_LOOP:
+    ; seek for the next digit
+    mov  rsi,[r8]               ; get the next character
+    call ISSPACE                ; check if a space
+    jne  TEST_ATOI_LOOP_DIGIT   ; if not, then use as a digit
+    inc  r8                     ; otherwise, move to the next character
+    jmp  TEST_ATOI_LOOP         ; repeat until not a space
+TEST_ATOI_LOOP_DIGIT:
     ; C equivalent:
     ;   PROMPT_INPUT(rdi, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
     push rcx            ; guard from write changing rcx
@@ -239,7 +246,7 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
-; WRITELN(char *rsi, int rdx)
+; WRITELN(char *rdi, int rdx)
 ; Writes the given string followed by a newline character.
 ; @param
 ;   rsi : char *= string to write, followed by a newline
@@ -319,6 +326,26 @@ PROMPT_INPUT:
     pop  rcx            ; guard from syscall changing rcx
     ret
 ; end PROMPT_INPUT
+
+
+; SEEKNE(char **rsi, void (*rax)(char))
+; SEEK Not Equal
+; seeks in the string *rsi until the function rax does not set ZF.
+; @param
+;   rsi : char **= pointer to string to search
+; @param
+;   rax : void (*)(char) = pointer to address of 
+SEEKNE:
+    push r8             ; backup general purpose r8 for current character
+SEEKNE_LOOP:
+    mov  r8,[rsi]               ; get the next character
+    call rax                    ; check if a space
+    jne  SEEKNE_END             ; if not, then use as a digit
+    inc  rsi                    ; otherwise, move to the next character
+    jmp  SEEKNE_LOOP            ; repeat until not ZF
+SEEKNE_END:
+    pop  r8             ; restore general purpose
+    ret
 
 
 ; ATOI(int *rdi, int rsi, int rdx, char *rax)
