@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.3 - 2022-06-24t15:57Q
+;       ATOI keeps a running index of input address
+;
 ;   v3.2.2 - 2022-06-24t02:06Q
 ;       updated TEST_ATOI to use WRITELN
 ;
@@ -178,7 +181,7 @@ TEST_ATOI_LOOP:
     mov  rax,rdi                ; parse from ECHO_IN
     call ATOI_SEEK
     ; update running address
-    mov  r8,rdi
+    mov  r8,rax
     ; C equivalent: SIGN128(&rdx, rdi);
     mov  rax,rdi                ; copy the parsed integer into rax
     call SIGN128                ; extend the sign bit
