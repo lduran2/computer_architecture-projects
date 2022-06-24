@@ -161,21 +161,24 @@ CALC:
 
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
-    mov rcx,2           ; count 2 times
+    mov  rcx,2          ; count 2 times
+    mov  r8,ECHO_IN     ; initialize running address of ECHO_IN
 TEST_ATOI_LOOP:
     ; C equivalent:
-    ;   PROMPT_INPUT(ECHO_IN, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
+    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
     push rcx            ; guard from write changing rcx
-    mov  rdi,ECHO_IN            ; buffer address for storage
+    mov  rdi,r8                 ; buffer address for storage
     mov  rdx,INT_LEN            ; acceptable buffer length
     mov  rsi,ECHO_PROMPT        ; prompt to print
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
     pop  rcx            ; restore rcx
-    ; C equivalent: ATOI(&rdi, IP_RADIX, INT_LEN, ECHO_IN)
+    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi)
     mov  rsi,IP_RADIX           ; set radix
-    mov  rax,ECHO_IN            ; parse from ECHO_IN
-    call ATOI
+    mov  rax,rdi                ; parse from ECHO_IN
+    call ATOI_SEEK
+    ; update running address
+    mov  r8,rdi
     ; C equivalent: SIGN128(&rdx, rdi);
     mov  rax,rdi                ; copy the parsed integer into rax
     call SIGN128                ; extend the sign bit
