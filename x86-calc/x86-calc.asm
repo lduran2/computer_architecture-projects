@@ -44,6 +44,9 @@
 ;   v2.0.0 - 2022-06-16t17:42Q
 ;       ready to print ITOA demos
 ;
+;   v1.3.1 - 2022-06-24t01:02Q
+;       abstracted WRITELN
+;
 ;   v1.3.0 - 2022-06-22t00:28Q
 ;       reverser can now be out of place
 ;
@@ -152,19 +155,43 @@ TEST_STRREV:
     mov  rsi,REV_TEST   ; string to reverse
     mov  rdx,REV_LEN    ; length of the string to print
     call STRREV         ; reverse the string
-    ; C equivalent: write(1, REV_TEST, REV_LEN);
+    ; C equivalent: WRITELN(REV_TEST, REV_LEN);
     ; print the reversed string to standard output
-    mov  rsi,REV_TEST_DST   ; print the reversed string
+    mov  rsi,REV_TEST_DST   ; set to print the reversed string
+    call WRITELN            ; print the string with a newline
+    ret
+; end TEST_STRREV
+
+
+; WRITELN(char *rsi, int rdx)
+; Writes the given string followed by a newline character.
+; @param
+;   rsi : char *= string to write, followed by a newline
+; @param
+;   rdx : int = length of the string rsi
+WRITELN:
+    ; set up
+    push rsi            ; backup the string to print
+    push rdx            ; backup the size of the string
+    push rax            ; backup to hold the system call
+    push rdi            ; backup to hold the file descriptor
+    ; C equivalent: write(1, rsi, rdx);
+    ; print the string in rsi
     mov  rax,1          ; system call to perform: sys_write
     mov  rdi,1          ; file descriptor to which to print, namely:
                         ; STDOUT (standard output)
     syscall     ; execute the system call
     ; C equivalent: write(1, ENDL, 1);
+    ; print the newline
     mov  rsi,ENDL       ; newline to print
     mov  rdx,1          ; 1 character to print
+    ; clean up
+    push rdi            ; restore rdi
+    push rax            ; restore rax
+    push rdx            ; restore the size of the string
+    push rsi            ; restore the string to print
     syscall     ; execute the system call
-    ret
-; end TEST_STRREV
+; end WRITE_LINE
 
 
 ; ITOA(char *rdi, int rsi, int128_t (rdx:rax))
