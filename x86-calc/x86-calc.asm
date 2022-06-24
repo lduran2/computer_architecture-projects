@@ -3,6 +3,10 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.6 - 2022-06-24t18:50Q
+;       fixed space/null order in TEST_ATOI
+;       consistent checking for ASCII characters
+;
 ;   v3.2.5 - 2022-06-24t18:50Q
 ;       ATOI demo complete
 ;
@@ -182,14 +186,15 @@ TEST_ATOI_LOOP:
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
     pop  rcx            ; restore rcx
-TEST_ATOI_NULL_CHECK:
-    ; check if the current character is null
-    mov  rsi,[r8]           ; get the current character
-    test rsi,-1             ; if (null character, i.e., all bits reset),
-    je   TEST_ATOI_END      ; then finish the loop
     ; C equivalent: SEEKNE(&rdi, &ISSPACE);
     mov  rax,ISSPACE            ; use ISSPACE for seeking
     call SEEKNE                 ; find first non-space character
+    ; check if the current character is null
+TEST_ATOI_NULL_CHECK:
+    mov  rsi,[rdi]          ; get the current character
+    test rsi,7fh            ; check if null character
+    je   TEST_ATOI_END      ; break if all 0 ASCII bits
+TEST_ATOI_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
     mov  rax,rdi                ; parse from ECHO_IN
@@ -354,7 +359,7 @@ SEEKNE:
     push rsi            ; backup rsi for current character
 SEEKNE_LOOP:
     mov  rsi,[rdi]          ; get the next character
-    and  rsi,0x7F           ; ignore all non-ASCII data
+    and  rsi,7fh            ; ignore all non-ASCII bits
     call rax                ; check if a space
     jne  SEEKNE_END         ; if not, then use as a digit
     inc  rdi                ; otherwise, move to the next character
@@ -398,11 +403,11 @@ ATOI_SEEK:
                         ; this makes isspace easier to use
 ATOI_STR_LOOP:
     mov  rsi,[rax]          ; copy the character
-    and  rsi,0x7F           ; ignore all non-ASCII data
-    test rsi,-1             ; if (null character, all bits reset),
-    je  ATOI_STR_END        ; then finish the loop
+    test rsi,7fh            ; check if null character
+    je   ATOI_STR_END       ; break if all 0 ASCII bits
+    and  rsi,7fh            ; ignore all non-ASCII bits
     call ISSPACE            ; if (space character),
-    je  ATOI_STR_END        ; then finish the loop
+    je   ATOI_STR_END       ; then finish the loop
     ; otherwise
     test rsi,'@'            ; can the character be a single numeric digit?
     je   ATOI_NUMERIC       ; if so, go to numeric
