@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.2 - 2022-06-24t02:06Q
+;       updated TEST_ATOI to use WRITELN
+;
 ;   v3.2.1 - 2022-06-23t21:01Q
 ;       abstracted ATOI_SEEK, PROMPT_INPUT
 ;
@@ -160,14 +163,15 @@ CALC:
 TEST_ATOI:
     mov rcx,2           ; count 2 times
 TEST_ATOI_LOOP:
-    push rcx            ; guard from write changing rcx
     ; C equivalent:
     ;   PROMPT_INPUT(ECHO_IN, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
+    push rcx            ; guard from write changing rcx
     mov  rdi,ECHO_IN            ; buffer address for storage
     mov  rdx,INT_LEN            ; acceptable buffer length
     mov  rsi,ECHO_PROMPT        ; prompt to print
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
+    pop  rcx            ; restore rcx
     ; C equivalent: ATOI(&rdi, IP_RADIX, INT_LEN, ECHO_IN)
     mov  rsi,IP_RADIX           ; set radix
     mov  rax,ECHO_IN            ; parse from ECHO_IN
@@ -179,19 +183,10 @@ TEST_ATOI_LOOP:
     mov  rdi,ECHO_DST           ; set the result address
     mov  rsi,OP_RADIX           ; set radix
     call ITOA                   ; convert to a string
-    ; C equivalent: write(1, ECHO_DST, rdx);
+    ; C equivalent: WRITELN(ECHO_DST, rdx);
     ; print the string representation of the integer
     mov  rsi,rdi        ; move the string representation to print
-    mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
-    syscall     ; execute the system call
-    ; C equivalent: write(1, ENDL, 1);
-    mov  rsi,ENDL       ; newline to print
-    mov  rdx,1          ; 1 character to print
-    mov  rax,1          ; system call to perform: sys_write
-    syscall             ; execute the system call
-    pop  rcx            ; restore rcx
+    call WRITELN        ; print the string representation of the integer
     loop TEST_ATOI_LOOP ; repeat until (rcx==0)
 ;    jmp  TEST_ATOI      ; repeat infinitely
     ret
@@ -320,10 +315,6 @@ PROMPT_INPUT:
 ; end PROMPT_INPUT
 
 
-; WRITE_LINE(char *rsi, int rdx)
-WRITE_LINE:
-
-
 ; ATOI(int *rdi, int rsi, int rdx, char *rax)
 ; Ascii TO Integer
 ; parses an integer from its ASCII string representation.
@@ -349,7 +340,7 @@ ATOI:
 ; null character.
 ; @see #ATOI
 ATOI_SEEK:
-    push r8             ; backup general purpose r8 for source address
+    push rcx            ; backup counter
     push r9             ; backup general purpose r9 for radix
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
