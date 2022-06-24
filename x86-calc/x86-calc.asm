@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.5 - 2022-06-24t18:50Q
+;       ATOI demo complete
+;
 ;   v3.2.4 - 2022-06-24t18:34Q
 ;       implemented character seeking
 ;
@@ -170,13 +173,6 @@ TEST_ATOI:
     mov  rcx,2          ; count 2 times
     mov  r8,ECHO_IN     ; initialize running address of ECHO_IN
 TEST_ATOI_LOOP:
-    ; seek for the next digit
-    mov  rsi,[r8]               ; get the next character
-    call ISSPACE                ; check if a space
-    jne  TEST_ATOI_LOOP_DIGIT   ; if not, then use as a digit
-    inc  r8                     ; otherwise, move to the next character
-    jmp  TEST_ATOI_LOOP         ; repeat until not a space
-TEST_ATOI_LOOP_DIGIT:
     ; C equivalent:
     ;   PROMPT_INPUT(rdi, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
     push rcx            ; guard from write changing rcx
@@ -186,6 +182,11 @@ TEST_ATOI_LOOP_DIGIT:
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
     pop  rcx            ; restore rcx
+TEST_ATOI_NULL_CHECK:
+    ; check if the current character is null
+    mov  rsi,[r8]           ; get the current character
+    test rsi,-1             ; if (null character, i.e., all bits reset),
+    je   TEST_ATOI_END      ; then finish the loop
     ; C equivalent: SEEKNE(&rdi, &ISSPACE);
     mov  rax,ISSPACE            ; use ISSPACE for seeking
     call SEEKNE                 ; find first non-space character
@@ -206,8 +207,16 @@ TEST_ATOI_LOOP_DIGIT:
     ; print the string representation of the integer
     mov  rsi,rdi        ; move the string representation to print
     call WRITELN        ; print the string representation of the integer
-    loop TEST_ATOI_LOOP ; repeat until (rcx==0)
-;    jmp  TEST_ATOI      ; repeat infinitely
+    jmp  TEST_ATOI_LOOP ; repeat until (null at TEST_ATOI_NULL_CHECK)
+TEST_ATOI_END:
+    ; 2 newlines
+    mov  rdx,0          ; 0 characters
+    call WRITELN
+    call WRITELN
+    ; report DONE
+    mov  rsi,DONE       ; load DONE status
+    mov  rdx,DONE_LEN   ; length of DONE status
+    call WRITELN
     ret
 ; end TEST_ATOI
 
@@ -614,6 +623,10 @@ INT_LEN:        equ 21
 ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
 ; length of prompt
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
+; status printed when program finishes
+DONE:           db "Done."
+; length of DONE status
+DONE_LEN:       equ ($ - DONE)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
