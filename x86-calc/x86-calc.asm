@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v1.3.2 - 2022-06-24t01:20Q
+;       fixed syscall, pop, ret in WRITELN
+;
 ;   v1.3.1 - 2022-06-24t01:02Q
 ;       abstracted WRITELN
 ;
@@ -101,14 +104,16 @@ WRITELN:
     syscall     ; execute the system call
     ; C equivalent: write(1, ENDL, 1);
     ; print the newline
+    mov  rax,1          ; system call to perform: sys_write
     mov  rsi,ENDL       ; newline to print
     mov  rdx,1          ; 1 character to print
-    ; clean up
-    push rdi            ; restore rdi
-    push rax            ; restore rax
-    push rdx            ; restore the size of the string
-    push rsi            ; restore the string to print
     syscall     ; execute the system call
+    ; clean up
+    pop  rdi            ; restore rdi
+    pop  rax            ; restore rax
+    pop  rdx            ; restore the size of the string
+    pop  rsi            ; restore the string to print
+    ret
 ; end WRITE_LINE
 
 
