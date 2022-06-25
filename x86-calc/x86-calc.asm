@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.0.0 - 2022-06-24t21:25Q
+;       printing both prompts
+;
 ;   v3.2.6 - 2022-06-24t18:50Q
 ;       fixed space/null order in TEST_ATOI
 ;       consistent checking for ASCII characters
@@ -168,6 +171,19 @@ CHOOSE_MODE_DEFAULT:
 
 ; Perform the calc program.
 CALC:
+    mov  r8,CALC_PROMPTS        ; initialize the prompt array address
+    mov  r9,CALC_PROMPT_LENS    ; initialize the prompt length array address
+    mov  rcx,N_CALC_PROMPTS     ; number of prompts
+; print each prompt
+CALC_PROMPT_LOOP:
+    ; C equivalent: SIGN128(&rdx, *r8);
+    mov  rsi,[r8]               ; prompt to print
+    mov  rdx,[r9]               ; #characters to print
+    call WRITELN                ; print the prompt
+    add  r8,QWORD_SIZE          ; next prompt
+    add  r9,QWORD_SIZE          ; next length
+    loop CALC_PROMPT_LOOP       ; repeat
+CALC_PROMPT_END:
     ret
 ; end CALC
 
@@ -602,7 +618,7 @@ section .data
 ;   1 - test STRREV string reverser
 ;   2 - test itoa (integer to ASCII) for printing integers
 ;   3 - test atoi (ASCII to integer) for parse and echo
-PROGRAM_MODE:   equ 3
+PROGRAM_MODE:   equ 0
 ; string to be reversed
 REV_TEST:       db "Hello world!"
 ; length of REV_TEST
@@ -628,6 +644,20 @@ INT_LEN:        equ 21
 ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
 ; length of prompt
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
+; prompt for user input for operand 1
+CALC_PROMPT_1:      db "Please enter the augend.", 0ah, "> "
+; length of operand 1 prompt
+CALC_PROMPT_1_LEN:  equ ($ - CALC_PROMPT_1)
+; prompt for user input for operand 2
+CALC_PROMPT_2:      db "Please enter the addend.", 0ah, "> "
+; length of operand 2 prompt
+CALC_PROMPT_2_LEN:  equ ($ - CALC_PROMPT_2)
+; array of calculator prompts
+CALC_PROMPTS:       dq CALC_PROMPT_1, CALC_PROMPT_2
+; array of calculator prompt lengths
+CALC_PROMPT_LENS:   dq CALC_PROMPT_1_LEN, CALC_PROMPT_2_LEN
+; #calculator prompts
+N_CALC_PROMPTS:     equ (($ - CALC_PROMPT_LENS)/QWORD_SIZE)
 ; status printed when program finishes
 DONE:           db "Done."
 ; length of DONE status
@@ -645,4 +675,8 @@ ITOA_TEST_DST:  resb INT_LEN
 ECHO_IN:        resb INT_LEN
 ; resulting string from echo
 ECHO_DST:       resb INT_LEN
+; buffer for input for the calculator
+CALC_IN:        resb 255
+; resulting string from echo
+CALC_OUT:       resb INT_LEN
 
