@@ -324,6 +324,8 @@ STRREV_POP_END:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment stores the data to be used in the program.
 section .data
+; newline character
+ENDL:           db 0ah
 ; Program modes:
 ;   0 - calculator
 ;   1 - test STRREV string reverser
@@ -334,8 +336,6 @@ REV_TEST:       db "Hello world!"
 ; length of REV_TEST
 REV_LEN:        equ ($ - REV_TEST)
 ; newline character
-ENDL:           db 0ah
-; radix (default decimal numbers)
 RADIX:          equ 10
 ; each integer is a quad word = 8 bytes
 QWORD_SIZE:     equ 8
@@ -346,7 +346,6 @@ ITOA_TEST:      dq 365,42,250,-1760
 ; ($ - ITOA_TEST) gives #bytes,
 ; convert to #quad words
 ITOA_LEN:       equ (($ - ITOA_TEST)/QWORD_SIZE)
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
