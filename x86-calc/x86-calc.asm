@@ -162,6 +162,8 @@ STRREV_POP_END:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment stores the data to be used in the program.
 section .data
+; newline character
+ENDL:           db 0ah
 ; Program modes:
 ;   0 - calculator
 ;   1 - test STRREV string reverser
@@ -170,8 +172,6 @@ PROGRAM_MODE:   equ 1
 REV_TEST:       db "Hello world!"
 ; length of REV_TEST
 REV_LEN:        equ $ - REV_TEST
-; newline character
-ENDL:           db 0ah
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
