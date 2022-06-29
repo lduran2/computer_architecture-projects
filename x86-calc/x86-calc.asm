@@ -3,6 +3,10 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v2.9.3 - 2022-06-26t19:10Q
+;       generalized ITOA_TEST_DST for reuse
+;       more thorough documentation for .data and .bss
+;
 ;   v2.9.2 - 2022-06-24t01:38Q
 ;       updated TEST_ITOA to use WRITELN
 ;
@@ -127,12 +131,12 @@ TEST_ITOA:
     mov  rcx,ITOA_LEN   ; number of integers to test
 ; run each test
 TEST_ITOA_TEST_LOOP:
-    mov  rdi,ITOA_TEST_DST      ; set result address
+    mov  rdi,INT_STR_REP      ; set result address
     mov  rsi,RADIX              ; set radix
     mov  rax,[r8]               ; get the current integer
     call SIGN128                ; extend sign bit
     call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(ITOA_TEST_DST, rdx);
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
     ; print the last integer converted
     mov  rsi,rdi                ; move result string address to print
     ; the length is already ready from ITOA
@@ -324,34 +328,44 @@ STRREV_POP_END:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment stores the data to be used in the program.
 section .data
-; newline character
+
+; Constants:
+;   newline character
 ENDL:           db 0ah
+;   each integer is a quad word = 8 bytes
+QWORD_SIZE:     equ 8
+;   character length of a decimal integer (20 digits + sign)
+INT_LEN:        equ 21
+;   radix (default decimal numbers)
+RADIX:          equ 10
+
 ; Program modes:
 ;   0 - calculator
 ;   1 - test STRREV string reverser
 ;   2 - test itoa (integer to ASCII) for printing integers
 PROGRAM_MODE:   equ 2
-; string to be reversed
+
+; String reverse test:
+;   string to be reversed
 REV_TEST:       db "Hello world!"
-; length of REV_TEST
+;   length of REV_TEST
 REV_LEN:        equ ($ - REV_TEST)
-; newline character
-RADIX:          equ 10
-; each integer is a quad word = 8 bytes
-QWORD_SIZE:     equ 8
-; array of integers to print
-; (quad word, 64-bits)
+
+; Integer TO ASCII test:
+;   array of integers to print
+;   (quad word, 64-bits)
 ITOA_TEST:      dq 365,42,250,-1760
-; number of integers to print
-; ($ - ITOA_TEST) gives #bytes,
-; convert to #quad words
+;   number of integers to print
+;   ($ - ITOA_TEST) gives #bytes,
+;   convert to #quad words
 ITOA_LEN:       equ (($ - ITOA_TEST)/QWORD_SIZE)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for reverser test results
-REV_TEST_DST:  times REV_LEN resb 0
-; allow 21 bytes for result of ITOA test (20 digits + sign)
-ITOA_TEST_DST:  resb 21
+REV_TEST_DST:   times REV_LEN resb 0
+; allocate space for string representations of integers
+INT_STR_REP:    times INT_LEN resb 0
 
