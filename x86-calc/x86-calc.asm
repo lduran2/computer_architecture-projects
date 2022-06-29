@@ -98,6 +98,9 @@
 ;   v2.0.0 - 2022-06-16t17:42Q
 ;       ready to print ITOA demos
 ;
+;   v1.4.0 - 2022-06-29t01:47Q
+;       fixed allocation (times->resb)
+;
 ;   v1.3.2 - 2022-06-24t01:20Q
 ;       fixed syscall, pop, ret in WRITELN
 ;
@@ -650,9 +653,9 @@ DONE_LEN:       equ ($ - DONE)
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for reverser test results
-REV_TEST_DST:   times REV_LEN resb 0
+REV_TEST_DST:   resb REV_LEN
 ; allocate space for string representations of integers
-INT_STR_REP:    times INT_LEN resb 0
+INT_STR_REP:    resb INT_LEN
 ; buffer for input
 ECHO_IN:        resb INT_LEN
 ; resulting string from echo
