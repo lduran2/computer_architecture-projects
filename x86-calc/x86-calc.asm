@@ -3,14 +3,20 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
-;   v3.2.6 - 2022-06-24t18:50Q
+;   v3.4.1 - 2022-06-29t02:34Q
+;       handling ATOI of negative input
+;
+;   v3.4.0 - 2022-06-29t02:12Q
+;       done generalizing, fix allocating buffers
+;
+;   v3.3.2 - 2022-06-24t18:50Q
 ;       fixed space/null order in TEST_ATOI
 ;       consistent checking for ASCII characters
 ;
-;   v3.2.5 - 2022-06-24t18:50Q
+;   v3.3.1 - 2022-06-24t18:50Q
 ;       ATOI demo complete
 ;
-;   v3.2.4 - 2022-06-24t18:34Q
+;   v3.3.0 - 2022-06-24t18:34Q
 ;       implemented character seeking
 ;
 ;   v3.2.3 - 2022-06-24t15:57Q
@@ -49,6 +55,10 @@
 ;
 ;   v3.0.0 - 2022-06-22t03:17Q
 ;       prompt for parse and echo (ATOI test)
+;
+;   v2.9.3 - 2022-06-26t19:10Q
+;       generalized ITOA_TEST_DST for reuse
+;       more thorough documentation for .data and .bss
 ;
 ;   v2.9.2 - 2022-06-24t01:38Q
 ;       updated TEST_ITOA to use WRITELN
@@ -93,6 +103,9 @@
 ;
 ;   v2.0.0 - 2022-06-16t17:42Q
 ;       ready to print ITOA demos
+;
+;   v1.4.0 - 2022-06-29t01:47Q
+;       fixed allocation (times->resb)
 ;
 ;   v1.3.2 - 2022-06-24t01:20Q
 ;       fixed syscall, pop, ret in WRITELN
@@ -175,13 +188,13 @@ CALC:
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
     mov  rcx,2          ; count 2 times
-    mov  r8,ECHO_IN     ; initialize running address of ECHO_IN
+    mov  r8,IP_BUFF     ; initialize running address of input buffer
 TEST_ATOI_LOOP:
     ; C equivalent:
-    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
+    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, IP_BUFF_LEN, ECHO_PROMPT_LEN);
     push rcx            ; guard from write changing rcx
     mov  rdi,r8                 ; buffer address for storage
-    mov  rdx,INT_LEN            ; acceptable buffer length
+    mov  rdx,IP_BUFF_LEN        ; acceptable buffer length
     mov  rsi,ECHO_PROMPT        ; prompt to print
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
@@ -197,18 +210,18 @@ TEST_ATOI_NULL_CHECK:
 TEST_ATOI_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
-    mov  rax,rdi                ; parse from ECHO_IN
+    mov  rax,rdi                ; parse from IP_BUFF
     call ATOI_SEEK
     ; update running address
     mov  r8,rax
     ; C equivalent: SIGN128(&rdx, rdi);
     mov  rax,rdi                ; copy the parsed integer into rax
     call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(ECHO_DST, OP_RADIX, &rdx, rax);
-    mov  rdi,ECHO_DST           ; set the result address
+    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    mov  rdi,INT_STR_REP        ; set the result address
     mov  rsi,OP_RADIX           ; set radix
     call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(ECHO_DST, rdx);
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
     ; print the string representation of the integer
     mov  rsi,rdi        ; move the string representation to print
     call WRITELN        ; print the string representation of the integer
@@ -233,13 +246,13 @@ TEST_ITOA:
 ; run each test
 TEST_ITOA_TEST_LOOP:
     ; C equivalent: SIGN128(&rdx, *r8);
-    mov  rax,[r8]               ; get the current number
+    mov  rax,[r8]               ; get the current integer
     call SIGN128                ; extend sign bit
     ; C equivalent: ITOA(ITOA_TEST_DST, IP_RADIX, &rdx, *r8);
-    mov  rdi,ITOA_TEST_DST      ; set result address
+    mov  rdi,INT_STR_REP        ; set result address
     mov  rsi,IP_RADIX           ; set radix
     call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(ITOA_TEST_DST, rdx);
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
     ; print the last integer converted
     mov  rsi,rdi                ; move result string address to print
     ; the length is already ready from ITOA
@@ -389,18 +402,28 @@ ATOI:
 ; end ATOI
 
 
-; ATOI_SEEK(int *rdi, int rsi, int rdx, char *rax)
+; ATOI_SEEK(int *rdi, int rsi, int rdx, char **rax)
 ; Seeking implementation of ATOI.
-; After this runs, rax will be the address of the next whitespace or
+; After this runs, *rax will be the address of the next whitespace or
 ; null character.
 ; @see #ATOI
 ATOI_SEEK:
     push rcx            ; backup counter
+    push r8             ; flags a negative integer
     push r9             ; backup general purpose r9 for radix
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
+    mov  r8,0           ; reset negative flag
     mov  r9,rsi         ; free rsi for use as the current character
                         ; this makes isspace easier to use
+ATOI_SIGN_CHAR:
+    mov  rsi,[rax]          ; copy the character
+    and  rsi,7fh            ; ignore all non-ASCII bits
+    cmp  rsi,'-'            ; check if minus sign
+    jne  ATOI_STR_LOOP      ; if not, skip to loop
+    mov  r8,-1              ; otherwise, set negative integer flag
+    inc  rax                ; next character
+; loop through digits until whitespace or null
 ATOI_STR_LOOP:
     mov  rsi,[rax]          ; copy the character
     test rsi,7fh            ; check if null character
@@ -417,14 +440,22 @@ ATOI_ALPHA:
     jmp  ATOI_ACC_DIGIT         ; skip numeric
 ATOI_NUMERIC:
     and  rsi,~'0'               ; disable '0' bits for integer value
+; accumulate the next digit
 ATOI_ACC_DIGIT:
     imul rdi,r9                 ; multiply the sum by the radix
     add  rdi,rsi                ; add the digit to the sum so far
     inc  rax                ; next character in source
     loop ATOI_STR_LOOP      ; repeat
 ATOI_STR_END:
+; set the sign of the number
+ATOI_INT_SIGN:
+    test r8,-1              ; check (negative integer flag)
+    je   ATOI_CLEANUP       ; if reset, skip to cleanup
+    neg  rdi                ; otherwise, negate the integer
+ATOI_CLEANUP:
     mov  rsi,r9         ; restore radix
     pop  r9             ; restore general purpose
+    pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
     ret
 ; end ATOI_SEEK
@@ -597,40 +628,56 @@ STRREV_POP_END:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment stores the data to be used in the program.
 section .data
+
+; Constants:
+;   newline character
+ENDL:           db 0ah
+;   each integer is a quad word = 8 bytes
+QWORD_SIZE:     equ 8
+;   character length of a decimal integer (20 digits + sign)
+INT_LEN:        equ 21
+; radix for  input (defaults to decimal numbers)
+IP_RADIX:       equ 10
+; radix for output (defaults to decimal numbers)
+OP_RADIX:       equ 10
+
 ; Program modes:
 ;   0 - calculator
 ;   1 - test STRREV string reverser
 ;   2 - test itoa (integer to ASCII) for printing integers
 ;   3 - test atoi (ASCII to integer) for parse and echo
 PROGRAM_MODE:   equ 3
-; string to be reversed
+
+; String reverse test:
+;   string to be reversed
 REV_TEST:       db "Hello world!"
-; length of REV_TEST
+;   length of REV_TEST
 REV_LEN:        equ ($ - REV_TEST)
-; newline character
-ENDL:           db 0ah
-; radix for  input (defaults to decimal numbers)
-IP_RADIX:          equ 10
-; radix for output (defaults to decimal numbers)
-OP_RADIX:          equ 10
-; each integer is a quad word = 8 bytes
-QWORD_SIZE:     equ 8
-; array of integers to print
-; (quad word, 64-bits)
+
+; Integer TO ASCII test:
+;   array of integers to print
+;   (quad word, 64-bits)
 ITOA_TEST:      dq 365,42,250,-1760
-; number of integers to print
-; ($ - ITOA_TEST) gives #bytes,
-; convert to #quad words
+;   number of integers to print
+;   ($ - ITOA_TEST) gives #bytes,
+;   convert to #quad words
 ITOA_LEN:       equ (($ - ITOA_TEST)/QWORD_SIZE)
-; character length of a decimal integer (20 digits + sign)
-INT_LEN:        equ 21
-; prompt for user to enter integer
+
+; ASCII TO Integer test:
+;   prompt for user to enter integer
 ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
-; length of prompt
+;   length of prompt
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
-; status printed when program finishes
+
+
+; related to general user I/O
+;   number of operations to allow
+N_OPERATIONS:   equ 256
+;   length of input buffer (2 integers/operation)
+IP_BUFF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
+;   status printed when program finishes
 DONE:           db "Done."
-; length of DONE status
+;   length of DONE status
 DONE_LEN:       equ ($ - DONE)
 
 
@@ -638,11 +685,9 @@ DONE_LEN:       equ ($ - DONE)
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for reverser test results
-REV_TEST_DST:   times REV_LEN resb 0
-; allow 21 bytes for result of ITOA test
-ITOA_TEST_DST:  resb INT_LEN
+REV_TEST_DST:   resb REV_LEN
 ; buffer for input
-ECHO_IN:        resb INT_LEN
-; resulting string from echo
-ECHO_DST:       resb INT_LEN
+IP_BUFF:        resb IP_BUFF_LEN
+; allocate space for string representations of integers
+INT_STR_REP:    resb INT_LEN
 
