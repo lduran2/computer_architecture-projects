@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.4.1 - 2022-06-29t02:34Q
+;       handling ATOI of negative input
+;
 ;   v3.4.0 - 2022-06-29t02:12Q
 ;       done generalizing, fix allocating buffers
 ;
@@ -399,18 +402,28 @@ ATOI:
 ; end ATOI
 
 
-; ATOI_SEEK(int *rdi, int rsi, int rdx, char *rax)
+; ATOI_SEEK(int *rdi, int rsi, int rdx, char **rax)
 ; Seeking implementation of ATOI.
-; After this runs, rax will be the address of the next whitespace or
+; After this runs, *rax will be the address of the next whitespace or
 ; null character.
 ; @see #ATOI
 ATOI_SEEK:
     push rcx            ; backup counter
+    push r8             ; flags a negative integer
     push r9             ; backup general purpose r9 for radix
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
+    mov  r8,0           ; reset negative flag
     mov  r9,rsi         ; free rsi for use as the current character
                         ; this makes isspace easier to use
+ATOI_SIGN_CHAR:
+    mov  rsi,[rax]          ; copy the character
+    and  rsi,7fh            ; ignore all non-ASCII bits
+    cmp  rsi,'-'            ; check if minus sign
+    jne  ATOI_STR_LOOP      ; if not, skip to loop
+    mov  r8,-1              ; otherwise, set negative integer flag
+    inc  rax                ; next character
+; loop through digits until whitespace or null
 ATOI_STR_LOOP:
     mov  rsi,[rax]          ; copy the character
     test rsi,7fh            ; check if null character
@@ -427,14 +440,22 @@ ATOI_ALPHA:
     jmp  ATOI_ACC_DIGIT         ; skip numeric
 ATOI_NUMERIC:
     and  rsi,~'0'               ; disable '0' bits for integer value
+; accumulate the next digit
 ATOI_ACC_DIGIT:
     imul rdi,r9                 ; multiply the sum by the radix
     add  rdi,rsi                ; add the digit to the sum so far
     inc  rax                ; next character in source
     loop ATOI_STR_LOOP      ; repeat
 ATOI_STR_END:
+; set the sign of the number
+ATOI_INT_SIGN:
+    test r8,-1              ; check (negative integer flag)
+    je   ATOI_CLEANUP       ; if reset, skip to cleanup
+    neg  rdi                ; otherwise, negate the integer
+ATOI_CLEANUP:
     mov  rsi,r9         ; restore radix
     pop  r9             ; restore general purpose
+    pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
     ret
 ; end ATOI_SEEK
