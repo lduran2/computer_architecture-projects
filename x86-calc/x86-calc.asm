@@ -3,6 +3,53 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v3.2.6 - 2022-06-24t18:50Q
+;       fixed space/null order in TEST_ATOI
+;       consistent checking for ASCII characters
+;
+;   v3.2.5 - 2022-06-24t18:50Q
+;       ATOI demo complete
+;
+;   v3.2.4 - 2022-06-24t18:34Q
+;       implemented character seeking
+;
+;   v3.2.3 - 2022-06-24t15:57Q
+;       running input address for ATOI
+;
+;   v3.2.2 - 2022-06-24t02:06Q
+;       updated TEST_ATOI to use WRITELN
+;
+;   v3.2.1 - 2022-06-23t21:01Q
+;       abstracted ATOI_SEEK, PROMPT_INPUT
+;
+;   v3.2.0 - 2022-06-23t19:35Q
+;       ATOI stops at first space character
+;
+;   v3.1.6 - 2022-06-22t19:10Q
+;       different radix for I/P, O/P
+;
+;   v3.1.5 - 2022-06-22t19:10Q
+;       ATOI digit placing
+;
+;   v3.1.4 - 2022-06-22t18:40Q
+;       ATOI = sum of digits
+;       filtering out digits
+;
+;   v3.1.3 - 2022-06-22t17:36Q
+;       ATOI = last digit
+;
+;   v3.1.2 - 2022-06-22t13:37Q
+;       mock ATOI=0, fixed string rep to print
+;
+;   v3.1.1 - 2022-06-22t13:21Q
+;       setting up calls needed for TEST_ATOI
+;
+;   v3.1.0 - 2022-06-22t03:26Q
+;       just printing input with no processing
+;
+;   v3.0.0 - 2022-06-22t03:17Q
+;       prompt for parse and echo (ATOI test)
+;
 ;   v2.9.3 - 2022-06-26t19:10Q
 ;       generalized ITOA_TEST_DST for reuse
 ;       more thorough documentation for .data and .bss
@@ -111,8 +158,12 @@ CHOOSE_MODE_STRREV:
     call TEST_STRREV            ; else run TEST_STRREV
 CHOOSE_MODE_ITOA:
     cmp  r8,2                   ; if (PROGRAM_MODE != 2)
-    jne  CHOOSE_MODE_DEFAULT    ;   default
+    jne  CHOOSE_MODE_ECHO       ;   check for ECHO
     call TEST_ITOA              ; else run TEST_ITOA
+CHOOSE_MODE_ECHO:
+    cmp  r8,3                   ; if (PROGRAM_MODE != 3)
+    jne  CHOOSE_MODE_DEFAULT    ;   default
+    call TEST_ATOI              ; else run TEST_ATOI
 CHOOSE_MODE_DEFAULT:
     pop  r8             ; restore general purpose
     ret
@@ -125,16 +176,72 @@ CALC:
 ; end CALC
 
 
+; Test the ATOI function by parse and echo
+TEST_ATOI:
+    mov  rcx,2          ; count 2 times
+    mov  r8,ECHO_IN     ; initialize running address of ECHO_IN
+TEST_ATOI_LOOP:
+    ; C equivalent:
+    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
+    push rcx            ; guard from write changing rcx
+    mov  rdi,r8                 ; buffer address for storage
+    mov  rdx,INT_LEN            ; acceptable buffer length
+    mov  rsi,ECHO_PROMPT        ; prompt to print
+    mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
+    call PROMPT_INPUT           ; prompt for and accept integer to echo
+    pop  rcx            ; restore rcx
+    ; C equivalent: SEEKNE(&rdi, &ISSPACE);
+    mov  rax,ISSPACE            ; use ISSPACE for seeking
+    call SEEKNE                 ; find first non-space character
+    ; check if the current character is null
+TEST_ATOI_NULL_CHECK:
+    mov  rsi,[rdi]          ; get the current character
+    test rsi,7fh            ; check if null character
+    je   TEST_ATOI_END      ; break if all 0 ASCII bits
+TEST_ATOI_NULL_CHECK_END:
+    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
+    mov  rsi,IP_RADIX           ; set radix
+    mov  rax,rdi                ; parse from ECHO_IN
+    call ATOI_SEEK
+    ; update running address
+    mov  r8,rax
+    ; C equivalent: SIGN128(&rdx, rdi);
+    mov  rax,rdi                ; copy the parsed integer into rax
+    call SIGN128                ; extend the sign bit
+    ; C equivalent: ITOA(ECHO_DST, OP_RADIX, &rdx, rax);
+    mov  rdi,ECHO_DST           ; set the result address
+    mov  rsi,OP_RADIX           ; set radix
+    call ITOA                   ; convert to a string
+    ; C equivalent: WRITELN(ECHO_DST, rdx);
+    ; print the string representation of the integer
+    mov  rsi,rdi        ; move the string representation to print
+    call WRITELN        ; print the string representation of the integer
+    jmp  TEST_ATOI_LOOP ; repeat until (null at TEST_ATOI_NULL_CHECK)
+TEST_ATOI_END:
+    ; 2 newlines
+    mov  rdx,0          ; 0 characters
+    call WRITELN
+    call WRITELN
+    ; report DONE
+    mov  rsi,DONE       ; load DONE status
+    mov  rdx,DONE_LEN   ; length of DONE status
+    call WRITELN
+    ret
+; end TEST_ATOI
+
+
 ; Test the ITOA function on ITOA_TEST
 TEST_ITOA:
     mov  r8,ITOA_TEST   ; initialize the integer address
     mov  rcx,ITOA_LEN   ; number of integers to test
 ; run each test
 TEST_ITOA_TEST_LOOP:
-    mov  rdi,INT_STR_REP      ; set result address
-    mov  rsi,RADIX              ; set radix
+    ; C equivalent: SIGN128(&rdx, *r8);
     mov  rax,[r8]               ; get the current integer
     call SIGN128                ; extend sign bit
+    ; C equivalent: ITOA(ITOA_TEST_DST, IP_RADIX, &rdx, *r8);
+    mov  rdi,INT_STR_REP        ; set result address
+    mov  rsi,IP_RADIX           ; set radix
     call ITOA                   ; convert to a string
     ; C equivalent: WRITELN(INT_STR_REP, rdx);
     ; print the last integer converted
@@ -150,7 +257,7 @@ TEST_ITOA_TEST_END:
 
 ; Test the STRREV function on REV_TEST.
 TEST_STRREV:
-    ; C equivalent: STRREV(REV_TEST, REV_LEN);
+    ; C equivalent: STRREV(REV_TEST_DST, REV_TEST, REV_LEN);
     mov  rdi,REV_TEST_DST   ; addres to place reversed string
     mov  rsi,REV_TEST   ; string to reverse
     mov  rdx,REV_LEN    ; length of the string to print
@@ -163,7 +270,7 @@ TEST_STRREV:
 ; end TEST_STRREV
 
 
-; WRITELN(char *rsi, int rdx)
+; WRITELN(char *rdi, int rdx)
 ; Writes the given string followed by a newline character.
 ; @param
 ;   rsi : char *= string to write, followed by a newline
@@ -198,25 +305,189 @@ WRITELN:
 ; end WRITE_LINE
 
 
-; ITOA(char *rdi, int rsi, int128_t (rdx:rax))
+; PROMPT_INPUT(char *rdi, char *rsi, int rdx, int rcx)
+; Displays a prompt, then accepts input.
+; @param
+;   rdi : out char * = address to buffer accepting input
+; @param
+;   rsi : in  char * = address to prompt to print
+; @param
+;   rdx : int = maximum length of input
+; @param
+;   rcx : int = exact length of output
+PROMPT_INPUT:
+    ; preparation
+    push rcx            ; guard from syscall changing rcx
+    push rax            ; backup to hold the system call
+    push rsi            ; backup to be replaced by rdi
+    push r8             ; backup general purpose r8 for input buffer
+    push r9             ; backup general purpose r9 for input length
+    mov  r8,rdi         ; backup input buffer address
+    mov  r9,rdx         ; backup input buffer length
+    ; C equivalent: write(1, rsi, rcx);
+    ; print the prompt to standard output
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    ; prompt is alread at rsi
+    mov  rdx,rcx        ; length of the prompt
+    syscall     ; execute the system call
+    ; C equivalent: read(0, r8, r9);
+    ; accept user input into r8
+    mov  rax,0          ; system call to perform: sys_read
+    mov  rdi,0          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    mov  rsi,r8         ; buffer address for storage
+    mov  rdx,r9         ; acceptable buffer length
+    syscall     ; execute the system call
+    ; clean up
+    mov  rdi,r8         ; restore input buffer address
+    mov  rdx,r9         ; restore input buffer length
+    pop  r9             ; restore general purpose
+    pop  r8             ; restore general purpose
+    pop  rsi            ; restore prompt address
+    pop  rax            ; restore rax
+    pop  rcx            ; guard from syscall changing rcx
+    ret
+; end PROMPT_INPUT
+
+
+; SEEKNE(char **rdi, void (*rax)(char rsi))
+; SEEK Not Equal
+; seeks in the string *rdi until the function rax does not set ZF.
+; @param
+;   rdi : char **= pointer to string to search
+; @param
+;   rax : void (*)(char rsi) = pointer to address of 
+SEEKNE:
+    push rsi            ; backup rsi for current character
+SEEKNE_LOOP:
+    mov  rsi,[rdi]          ; get the next character
+    and  rsi,7fh            ; ignore all non-ASCII bits
+    call rax                ; check if a space
+    jne  SEEKNE_END         ; if not, then use as a digit
+    inc  rdi                ; otherwise, move to the next character
+    jmp  SEEKNE_LOOP        ; repeat until not ZF
+SEEKNE_END:
+    pop  rsi            ; restore rsi
+    ret
+; end SEEKNE
+
+
+; ATOI(int *rdi, int rsi, int rdx, char *rax)
+; Ascii TO Integer
+; parses an integer from its ASCII string representation.
+; @param
+;   rdi : out int * = pointer to the integer
+; @param
+;   rsi : int = radix of the integer
+; @param
+;   rdx : int = length of string to parse
+; @param
+;   rax : in  char * = string representation of the integer to parse
+ATOI:
+    push rax            ; backup address of string representation
+    call ATOI_SEEK      ; all the seeking algorithm
+    pop  rax            ; restore the address of string representation
+    ret
+; end ATOI
+
+
+; ATOI_SEEK(int *rdi, int rsi, int rdx, char *rax)
+; Seeking implementation of ATOI.
+; After this runs, rax will be the address of the next whitespace or
+; null character.
+; @see #ATOI
+ATOI_SEEK:
+    push rcx            ; backup counter
+    push r9             ; backup general purpose r9 for radix
+    mov  rdi,0          ; initialize the integer
+    mov  rcx,rdx        ; set counter to rdx
+    mov  r9,rsi         ; free rsi for use as the current character
+                        ; this makes isspace easier to use
+ATOI_STR_LOOP:
+    mov  rsi,[rax]          ; copy the character
+    test rsi,7fh            ; check if null character
+    je   ATOI_STR_END       ; break if all 0 ASCII bits
+    and  rsi,7fh            ; ignore all non-ASCII bits
+    call ISSPACE            ; if (space character),
+    je   ATOI_STR_END       ; then finish the loop
+    ; otherwise
+    test rsi,'@'            ; can the character be a single numeric digit?
+    je   ATOI_NUMERIC       ; if so, go to numeric
+ATOI_ALPHA:
+    and  rsi,~'@'               ; disable '@' bits for integer value
+    add  rsi,9                  ; all alpha characters after '9'
+    jmp  ATOI_ACC_DIGIT         ; skip numeric
+ATOI_NUMERIC:
+    and  rsi,~'0'               ; disable '0' bits for integer value
+ATOI_ACC_DIGIT:
+    imul rdi,r9                 ; multiply the sum by the radix
+    add  rdi,rsi                ; add the digit to the sum so far
+    inc  rax                ; next character in source
+    loop ATOI_STR_LOOP      ; repeat
+ATOI_STR_END:
+    mov  rsi,r9         ; restore radix
+    pop  r9             ; restore general purpose
+    pop  rcx            ; restore counter
+    ret
+; end ATOI_SEEK
+
+
+; ISSPACE(char rsi)
+; Sets the equals/zero flag ZF if rsi is a whitespace character.
+;
+; These are any of: space (20h), form-feed ('\f' or 0ch), newline ('\n'
+; or 0ah), carriage return ('\r' or 0dh), horizontal tab ('\t' or 09h),
+; and vertical tab ('\v' or 0bh), i.e. the range [09h, 0dh].
+;
+; @param
+;   rsi : char = character to test
+; @see https://linux.die.net/man/3/isspace
+ISSPACE:
+    push r8             ; backup general purpose r8 for inverse flag
+    cmp  rsi,0dh        ; check upper bound
+    jg   ISSPACE_GT     ; if greater, check for 20h
+    cmp  rsi,09h        ; check lower bound
+    jl   ISSPACE_FALSE  ; not whitespace if less
+ISSPACE_TRUE:
+    mov  r8,0           ; set inverse to false
+    jmp  ISSPACE_CHECKED    ; finished checking
+ISSPACE_GT:
+    cmp  rsi,20h        ; if (space),
+    je  ISSPACE_TRUE    ; then space character
+ISSPACE_FALSE:
+    mov  r8,-1          ; set inverse to true
+ISSPACE_CHECKED:
+    test r8,-1          ; test the inverse, setting ZF accordingly
+    pop  r8             ; restore general purpose
+    ret
+; end ISSPACE
+
+
+; ITOA(char *rdi, int rsi, int *rdx, int rax)
 ; Integer TO Ascii
-; converts an integer to ASCII.
+; converts an integer into an ASCII string representation.
 ; @param
 ;   rdi : out char * = string converted from integer
 ; @param
 ;   rsi : int = radix of the integer
 ; @param
-;   (rdx:rax) : in  int128_t = integer to convert
-;   rdx       : out int      = length of string converted from integer
+;   rdx :
+;       in  int * = upper quad word of integer to convert
+;       out int * = length of string converted from integer
+; @param
+;   rax : int = lower quad word of integer to convert
 ITOA:
     ; safeguard the radix
     push rsi            ; backup radix (replaced in ITOA_PUSH)
-    call ITOA_PUSH      ; call the inlined version
+    call ITOA_IMPL      ; call the implementation
     pop  rsi            ; restore radix
     ret
 ; push the digits of the integer onto stack
-; the digits will be backwards
-ITOA_PUSH:
+; The digits will be backwards.
+; Then inline STRREV_POP_INIT.
+ITOA_IMPL:
     push rcx            ; for STRREV: backup counter
     push r8             ; backup general purpose r8 for digit count
     push r9             ; for STRREV: backup general purpose r9
@@ -227,13 +498,14 @@ ITOA_PUSH:
     test r10,-1             ; test sign bit
     je   ITOA_NOW_POSITIVE  ; if not set, then already positive
     ; otherwise
-    not  rax                ; flip low  quad words (1s' complement)
-    not  rdx                ; flip high quad words (1s' complement)
+    not  rax                ; flip low  quad word (1s' complement)
+    not  rdx                ; flip high quad word (1s' complement)
     add  rax,1              ; increment for 2s' complement
     adc  rdx,0              ; carry     for 2s' complement
 ; upon reaching this label, (rdx:rax) is positive, with sign in r10
 ITOA_NOW_POSITIVE:
 ; loop while dividing (rdx:rax) by radix (rsi)
+; and pushing each digit onto the stack
 ITOA_DIVIDE_INT_LOOP:
     ; (rax, rdx) = divmod((rdx:rax), rsi);
     idiv rsi                    ; divide (rdx:rax) by radix
@@ -250,6 +522,7 @@ ITOA_STORE_DIGIT:
     inc  r8                     ; count digits so far
     test rax,-1                 ; if (!quotient)
     je   ITOA_DIVIDE_INT_END    ; then break
+    ; C equivalent: SIGN128(&rdx, rax);
     call SIGN128                ; extend sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
 ITOA_DIVIDE_INT_END:
@@ -336,14 +609,17 @@ ENDL:           db 0ah
 QWORD_SIZE:     equ 8
 ;   character length of a decimal integer (20 digits + sign)
 INT_LEN:        equ 21
-;   radix (default decimal numbers)
-RADIX:          equ 10
+; radix for  input (defaults to decimal numbers)
+IP_RADIX:       equ 10
+; radix for output (defaults to decimal numbers)
+OP_RADIX:       equ 10
 
 ; Program modes:
 ;   0 - calculator
 ;   1 - test STRREV string reverser
 ;   2 - test itoa (integer to ASCII) for printing integers
-PROGRAM_MODE:   equ 2
+;   3 - test atoi (ASCII to integer) for parse and echo
+PROGRAM_MODE:   equ 3
 
 ; String reverse test:
 ;   string to be reversed
@@ -360,6 +636,15 @@ ITOA_TEST:      dq 365,42,250,-1760
 ;   convert to #quad words
 ITOA_LEN:       equ (($ - ITOA_TEST)/QWORD_SIZE)
 
+; prompt for user to enter integer
+ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
+; length of prompt
+ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
+; status printed when program finishes
+DONE:           db "Done."
+; length of DONE status
+DONE_LEN:       equ ($ - DONE)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
@@ -368,4 +653,8 @@ section .bss
 REV_TEST_DST:   times REV_LEN resb 0
 ; allocate space for string representations of integers
 INT_STR_REP:    times INT_LEN resb 0
+; buffer for input
+ECHO_IN:        resb INT_LEN
+; resulting string from echo
+ECHO_DST:       resb INT_LEN
 
