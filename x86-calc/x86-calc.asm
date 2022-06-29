@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v1.4.0 - 2022-06-29t01:47Q
+;       fixed allocation (times->resb)
+;
 ;   v1.3.2 - 2022-06-24t01:20Q
 ;       fixed syscall, pop, ret in WRITELN
 ;
@@ -177,5 +180,5 @@ REV_LEN:        equ $ - REV_TEST
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for reverser test results
-REV_TEST_DST:  times REV_LEN resb 0
+REV_TEST_DST:  resb REV_LEN
 
