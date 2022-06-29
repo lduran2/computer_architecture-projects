@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.1.1 - 2022-06-29t15:31Q
+;       confirming calculator input
+;
 ;   v4.1.0 - 2022-06-29t03:09Q
 ;       storing input for calculator
 ;
@@ -193,6 +196,8 @@ CALC:
     mov  r8,CALC_PROMPTS        ; initialize the prompt array address
     mov  r9,CALC_PROMPT_LENS    ; initialize the prompt length array address
     mov  r10,IP_CBUF            ; initialize running address of input buffer
+    mov  r11,IP_INT_ARR         ; initialize running address of
+                                ;   input integers
     mov  rcx,N_CALC_PROMPTS     ; number of prompts
 ; print each prompt
 CALC_PROMPT_LOOP:
@@ -200,17 +205,38 @@ CALC_PROMPT_LOOP:
     ; PROMPT_INPUT(rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
     ;   CALC_PROMPT_LENS[N_CALC_PROMPTS - rcx]);
     push rcx            ; guard from write changing rcx
-    mov  rdi,[r10]              ; buffer address for storage
+    mov  rdi,r10                ; buffer address for storage
     mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
     mov  rsi,[r8]               ; prompt to print
     mov  rcx,[r9]               ; #characters to print
     call PROMPT_INPUT           ; print the prompt
+    pop  rcx            ; restore rcx
+
+    ; confirm input
+    mov  rsi,r10        ; move the string representation to print
+    mov  rdx,1          ; print 1 character
+    call WRITELN        ; print the string representation of the integer
+
+    ; C equivalent: SEEKNE(&rdi, &ISSPACE);
+    ; mov  rax,ISSPACE            ; use ISSPACE for seeking
+    ; call SEEKNE                 ; find first non-space character
+    ; check if the current character is null
+CALC_NULL_CHECK:
+    ; mov  rsi,[rdi]          ; get the current character
+    ; test rsi,7fh            ; check if null character
+    ; je   CALC_PROMPT_END    ; break if all 0 ASCII bits
+CALC_NULL_CHECK_END:
+    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
+    ; mov  rsi,IP_RADIX           ; set radix
+    ; mov  rax,rdi                ; parse from IP_CBUF
+    ; call ATOI_SEEK
     ; iterate
+    ; mov  r10,rax                ; update running address
+    ; mov  [r11],rdi              ; store the new integer
     add  r8,QWORD_SIZE          ; next prompt
     add  r9,QWORD_SIZE          ; next length
-    add  r10,QWORD_SIZE         ; next buffer address
+    add  r11,QWORD_SIZE         ; next integer address
     loop CALC_PROMPT_LOOP       ; repeat
-    pop  rcx            ; restore rcx
 CALC_PROMPT_END:
     ret
 ; end CALC
