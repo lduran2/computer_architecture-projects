@@ -50,6 +50,10 @@
 ;   v3.0.0 - 2022-06-22t03:17Q
 ;       prompt for parse and echo (ATOI test)
 ;
+;   v2.9.3 - 2022-06-26t19:10Q
+;       generalized ITOA_TEST_DST for reuse
+;       more thorough documentation for .data and .bss
+;
 ;   v2.9.2 - 2022-06-24t01:38Q
 ;       updated TEST_ITOA to use WRITELN
 ;
@@ -233,13 +237,13 @@ TEST_ITOA:
 ; run each test
 TEST_ITOA_TEST_LOOP:
     ; C equivalent: SIGN128(&rdx, *r8);
-    mov  rax,[r8]               ; get the current number
+    mov  rax,[r8]               ; get the current integer
     call SIGN128                ; extend sign bit
     ; C equivalent: ITOA(ITOA_TEST_DST, IP_RADIX, &rdx, *r8);
-    mov  rdi,ITOA_TEST_DST      ; set result address
+    mov  rdi,INT_STR_REP        ; set result address
     mov  rsi,IP_RADIX           ; set radix
     call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(ITOA_TEST_DST, rdx);
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
     ; print the last integer converted
     mov  rsi,rdi                ; move result string address to print
     ; the length is already ready from ITOA
@@ -597,33 +601,41 @@ STRREV_POP_END:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment stores the data to be used in the program.
 section .data
+
+; Constants:
+;   newline character
+ENDL:           db 0ah
+;   each integer is a quad word = 8 bytes
+QWORD_SIZE:     equ 8
+;   character length of a decimal integer (20 digits + sign)
+INT_LEN:        equ 21
+; radix for  input (defaults to decimal numbers)
+IP_RADIX:       equ 10
+; radix for output (defaults to decimal numbers)
+OP_RADIX:       equ 10
+
 ; Program modes:
 ;   0 - calculator
 ;   1 - test STRREV string reverser
 ;   2 - test itoa (integer to ASCII) for printing integers
 ;   3 - test atoi (ASCII to integer) for parse and echo
 PROGRAM_MODE:   equ 3
-; string to be reversed
+
+; String reverse test:
+;   string to be reversed
 REV_TEST:       db "Hello world!"
-; length of REV_TEST
+;   length of REV_TEST
 REV_LEN:        equ ($ - REV_TEST)
-; newline character
-ENDL:           db 0ah
-; radix for  input (defaults to decimal numbers)
-IP_RADIX:          equ 10
-; radix for output (defaults to decimal numbers)
-OP_RADIX:          equ 10
-; each integer is a quad word = 8 bytes
-QWORD_SIZE:     equ 8
-; array of integers to print
-; (quad word, 64-bits)
+
+; Integer TO ASCII test:
+;   array of integers to print
+;   (quad word, 64-bits)
 ITOA_TEST:      dq 365,42,250,-1760
-; number of integers to print
-; ($ - ITOA_TEST) gives #bytes,
-; convert to #quad words
+;   number of integers to print
+;   ($ - ITOA_TEST) gives #bytes,
+;   convert to #quad words
 ITOA_LEN:       equ (($ - ITOA_TEST)/QWORD_SIZE)
-; character length of a decimal integer (20 digits + sign)
-INT_LEN:        equ 21
+
 ; prompt for user to enter integer
 ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
 ; length of prompt
@@ -639,8 +651,8 @@ DONE_LEN:       equ ($ - DONE)
 section .bss
 ; allocate space for reverser test results
 REV_TEST_DST:   times REV_LEN resb 0
-; allow 21 bytes for result of ITOA test
-ITOA_TEST_DST:  resb INT_LEN
+; allocate space for string representations of integers
+INT_STR_REP:    times INT_LEN resb 0
 ; buffer for input
 ECHO_IN:        resb INT_LEN
 ; resulting string from echo
