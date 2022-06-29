@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.1.0 - 2022-06-29t03:09Q
+;       storing input for calculator
+;
 ;   v4.0.1 - 2022-06-29t02:53Q
 ;       clean up after generalized buffers
 ;
@@ -189,16 +192,25 @@ CHOOSE_MODE_DEFAULT:
 CALC:
     mov  r8,CALC_PROMPTS        ; initialize the prompt array address
     mov  r9,CALC_PROMPT_LENS    ; initialize the prompt length array address
+    mov  r10,IP_CBUF            ; initialize running address of input buffer
     mov  rcx,N_CALC_PROMPTS     ; number of prompts
 ; print each prompt
 CALC_PROMPT_LOOP:
-    ; C equivalent: SIGN128(&rdx, *r8);
+    ; C equivalent:
+    ; PROMPT_INPUT(rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
+    ;   CALC_PROMPT_LENS[N_CALC_PROMPTS - rcx]);
+    push rcx            ; guard from write changing rcx
+    mov  rdi,[r10]              ; buffer address for storage
+    mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
     mov  rsi,[r8]               ; prompt to print
-    mov  rdx,[r9]               ; #characters to print
-    call WRITELN                ; print the prompt
+    mov  rcx,[r9]               ; #characters to print
+    call PROMPT_INPUT           ; print the prompt
+    ; iterate
     add  r8,QWORD_SIZE          ; next prompt
     add  r9,QWORD_SIZE          ; next length
+    add  r10,QWORD_SIZE         ; next buffer address
     loop CALC_PROMPT_LOOP       ; repeat
+    pop  rcx            ; restore rcx
 CALC_PROMPT_END:
     ret
 ; end CALC
@@ -207,13 +219,13 @@ CALC_PROMPT_END:
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
     mov  rcx,2          ; count 2 times
-    mov  r8,IP_BUFF     ; initialize running address of input buffer
+    mov  r8,IP_CBUF     ; initialize running address of input buffer
 TEST_ATOI_LOOP:
     ; C equivalent:
-    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, IP_BUFF_LEN, ECHO_PROMPT_LEN);
+    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, IP_CBUF_LEN, ECHO_PROMPT_LEN);
     push rcx            ; guard from write changing rcx
     mov  rdi,r8                 ; buffer address for storage
-    mov  rdx,IP_BUFF_LEN        ; acceptable buffer length
+    mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
     mov  rsi,ECHO_PROMPT        ; prompt to print
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
@@ -229,7 +241,7 @@ TEST_ATOI_NULL_CHECK:
 TEST_ATOI_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
-    mov  rax,rdi                ; parse from IP_BUFF
+    mov  rax,rdi                ; parse from IP_CBUF
     call ATOI_SEEK
     ; update running address
     mov  r8,rax
@@ -709,7 +721,7 @@ N_CALC_PROMPTS:     equ (($ - CALC_PROMPT_LENS)/QWORD_SIZE)
 ;   number of operations to allow
 N_OPERATIONS:   equ 256
 ;   length of input buffer (2 integers/operation)
-IP_BUFF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
+IP_CBUF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
 ;   status printed when program finishes
 DONE:           db "Done."
 ;   length of DONE status
@@ -721,8 +733,10 @@ DONE_LEN:       equ ($ - DONE)
 section .bss
 ; allocate space for reverser test results
 REV_TEST_DST:   resb REV_LEN
-; buffer for input
-IP_BUFF:        resb IP_BUFF_LEN
+; character buffer for input
+IP_CBUF:        resb IP_CBUF_LEN
+; array of input integers, corresponding to prompts
+IP_INT_ARR:     resq N_CALC_PROMPTS
 ; allocate space for string representations of integers
 INT_STR_REP:    resb INT_LEN
 
