@@ -3,14 +3,17 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
-;   v3.2.6 - 2022-06-24t18:50Q
+;   v3.4.0 - 2022-06-29t02:12Q
+;       done generalizing, fix allocating buffers
+;
+;   v3.3.2 - 2022-06-24t18:50Q
 ;       fixed space/null order in TEST_ATOI
 ;       consistent checking for ASCII characters
 ;
-;   v3.2.5 - 2022-06-24t18:50Q
+;   v3.3.1 - 2022-06-24t18:50Q
 ;       ATOI demo complete
 ;
-;   v3.2.4 - 2022-06-24t18:34Q
+;   v3.3.0 - 2022-06-24t18:34Q
 ;       implemented character seeking
 ;
 ;   v3.2.3 - 2022-06-24t15:57Q
@@ -182,13 +185,13 @@ CALC:
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
     mov  rcx,2          ; count 2 times
-    mov  r8,ECHO_IN     ; initialize running address of ECHO_IN
+    mov  r8,IP_BUFF     ; initialize running address of input buffer
 TEST_ATOI_LOOP:
     ; C equivalent:
-    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, INT_LEN, ECHO_PROMPT_LEN);
+    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, IP_BUFF_LEN, ECHO_PROMPT_LEN);
     push rcx            ; guard from write changing rcx
     mov  rdi,r8                 ; buffer address for storage
-    mov  rdx,INT_LEN            ; acceptable buffer length
+    mov  rdx,IP_BUFF_LEN        ; acceptable buffer length
     mov  rsi,ECHO_PROMPT        ; prompt to print
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
@@ -204,18 +207,18 @@ TEST_ATOI_NULL_CHECK:
 TEST_ATOI_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
-    mov  rax,rdi                ; parse from ECHO_IN
+    mov  rax,rdi                ; parse from IP_BUFF
     call ATOI_SEEK
     ; update running address
     mov  r8,rax
     ; C equivalent: SIGN128(&rdx, rdi);
     mov  rax,rdi                ; copy the parsed integer into rax
     call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(ECHO_DST, OP_RADIX, &rdx, rax);
-    mov  rdi,ECHO_DST           ; set the result address
+    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    mov  rdi,INT_STR_REP        ; set the result address
     mov  rsi,OP_RADIX           ; set radix
     call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(ECHO_DST, rdx);
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
     ; print the string representation of the integer
     mov  rsi,rdi        ; move the string representation to print
     call WRITELN        ; print the string representation of the integer
@@ -639,13 +642,21 @@ ITOA_TEST:      dq 365,42,250,-1760
 ;   convert to #quad words
 ITOA_LEN:       equ (($ - ITOA_TEST)/QWORD_SIZE)
 
-; prompt for user to enter integer
+; ASCII TO Integer test:
+;   prompt for user to enter integer
 ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
-; length of prompt
+;   length of prompt
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
-; status printed when program finishes
+
+
+; related to general user I/O
+;   number of operations to allow
+N_OPERATIONS:   equ 256
+;   length of input buffer (2 integers/operation)
+IP_BUFF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
+;   status printed when program finishes
 DONE:           db "Done."
-; length of DONE status
+;   length of DONE status
 DONE_LEN:       equ ($ - DONE)
 
 
@@ -654,10 +665,8 @@ DONE_LEN:       equ ($ - DONE)
 section .bss
 ; allocate space for reverser test results
 REV_TEST_DST:   resb REV_LEN
+; buffer for input
+IP_BUFF:        resb IP_BUFF_LEN
 ; allocate space for string representations of integers
 INT_STR_REP:    resb INT_LEN
-; buffer for input
-ECHO_IN:        resb INT_LEN
-; resulting string from echo
-ECHO_DST:       resb INT_LEN
 
