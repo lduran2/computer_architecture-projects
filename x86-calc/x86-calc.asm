@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.1.3 - 2022-06-29t18:25Q
+;       storing each integer
+;
 ;   v4.1.2 - 2022-06-29t15:31Q
 ;       calculator echoing
 ;
@@ -207,6 +210,7 @@ CALC_PROMPT_LOOP:
     ; C equivalent:
     ; PROMPT_INPUT(rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
     ;   CALC_PROMPT_LENS[N_CALC_PROMPTS - rcx]);
+    push r11            ; guard from syscall
     push rcx            ; guard from write changing rcx
     mov  rdi,r10                ; buffer address for storage
     mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
@@ -214,7 +218,7 @@ CALC_PROMPT_LOOP:
     mov  rcx,[r9]               ; #characters to print
     call PROMPT_INPUT           ; print the prompt
     pop  rcx            ; restore rcx
-
+    pop  r11            ; restore general purpose
     ; C equivalent: SEEKNE(&rdi, &ISSPACE);
     mov  rax,ISSPACE            ; use ISSPACE for seeking
     call SEEKNE                 ; find first non-space character
@@ -229,21 +233,9 @@ CALC_NULL_CHECK_END:
     mov  rax,rdi                ; parse from IP_CBUF
     call ATOI_SEEK              ; convert to integer,
                                 ;   changing address in buffer
-
-    ; update running address
-    mov  r10,rax
-    ; C equivalent: SIGN128(&rdx, rdi);
-    mov  rax,rdi                ; copy the parsed integer into rax
-    call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
-    mov  rdi,INT_STR_REP        ; set the result address
-    mov  rsi,OP_RADIX           ; set radix
-    call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(INT_STR_REP, rdx);
-    ; print the string representation of the integer
-    mov  rsi,rdi        ; move the string representation to print
-    call WRITELN        ; print the string representation of the integer
-
+    ; store results
+    mov  r10,rax                ; update running address
+    mov  [r11],rdi              ; store the new integer
     ; iterate
     add  r8,QWORD_SIZE          ; next prompt
     add  r9,QWORD_SIZE          ; next length
