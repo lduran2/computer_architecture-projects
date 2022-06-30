@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.3.2 - 2022-06-30t00:12Q
+;       nicer calculator output
+;
 ;   v4.3.1 - 2022-06-29t18:53Q
 ;       abstracted CALC_OUTPUT
 ;
@@ -304,9 +307,33 @@ CALC_PROMPT_END:
 ; @param
 ;   rax : int = result of operation
 CALC_OUTPUT:
-    push rdx                    ; backup operand 1 for sign
+    push r8                     ; backup for label array address
+    push r9                     ; backup for label length array address
     push rdi                    ; backup for result address
     push rsi                    ; backup for radix
+    ; we push the parameters in reverse
+    push rax                    ; backup result
+    push rdx                    ; backup operand 1 for sign
+    push rcx                    ; backup operand 0
+    ; initialize for loop
+    mov  r8,CALC_OP_LBLS        ; initialize the label array address
+    mov  r9,CALC_OP_LBL_LENS    ; initialize the label length array address
+    mov  rcx,N_CALC_OPS         ; number of outputs
+; loop through zipped labels and outputs
+CALC_OUTPUT_LOOP:
+    push rcx            ; guard from write changing rcx
+    ; first print the label
+    ; C equivalent: write(1, *r8, *r9);
+    ; print the prompt to standard output
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    mov  rsi,[r8]       ; ready label to print
+    mov  rdx,[r9]       ; number of characters to print
+    syscall     ; execute the system call
+    pop  rcx            ; restore rcx
+    ; next print the output
+    pop  rax                    ; pop next output
     ; C equivalent: SIGN128(&rdx, rax);
     ; rax already set
     call SIGN128                ; extend the sign bit
@@ -314,13 +341,29 @@ CALC_OUTPUT:
     mov  rdi,INT_STR_REP        ; set the result address
     mov  rsi,OP_RADIX           ; set radix
     call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(INT_STR_REP, rdx);
-    ; print the string representation of the integer
-    mov  rsi,rdi        ; move the string representation to print
-    call WRITELN        ; print the string representation of the integer
+    ; C equivalent: write(1, rdi, rdx);
+    push rcx            ; guard from write changing rcx
+    mov  rsi,rdi        ; print the string representation
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    ; length rdx already set
+    syscall     ; execute the system call
+    pop  rcx            ; restore rcx
+    ; iterate
+    add  r8,QWORD_SIZE          ; next label
+    add  r9,QWORD_SIZE          ; next length
+    loop CALC_OUTPUT_LOOP       ; loop until no next output
+CALC_OUTPUT_END:
+    ; end the printed statement
+    ; C equivalent: WRITELN(CALC_OP_END_LBL, CALC_OP_END_LBL_LEN);
+    mov  rsi,CALC_OP_END_LBL        ; move end label to print
+    mov  rdx,CALC_OP_END_LBL_LEN    ; length of end label
+    call WRITELN                    ; print end label
     pop  rsi                    ; restore source index
     pop  rdi                    ; restore destination index
-    pop  rdx                    ; restore data register
+    pop  r9                     ; restore general purpose
+    pop  r8                     ; restore general purpose
     ret
 ; end CALC_OUTPUT
 
@@ -809,7 +852,7 @@ ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
 ;   length of prompt
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
 
-; Calculator main:
+; Calculator input:
 ;   prompt for user input for operand 1
 CALC_PROMPT_0:      db "Please enter the augend.", 0ah, "> "
 ;   length of operand 1 prompt
@@ -824,7 +867,30 @@ CALC_PROMPTS:       dq CALC_PROMPT_0, CALC_PROMPT_1
 CALC_PROMPT_LENS:   dq CALC_PROMPT_0_LEN, CALC_PROMPT_1_LEN
 ;   #calculator prompts
 N_CALC_PROMPTS:     equ (($ - CALC_PROMPT_LENS)/QWORD_SIZE)
-;   status printed when program finishes
+
+; Calculator output:
+;   label for operand 0
+CALC_OP_LBL_0:      db ""
+;   length of label for operand 0
+CALC_OP_LBL_0_LEN:  equ ($ - CALC_OP_LBL_0)
+;   label for operand 1
+CALC_OP_LBL_1:      db " + "
+;   length of label for operand 1
+CALC_OP_LBL_1_LEN:  equ ($ - CALC_OP_LBL_1)
+;   label for result
+CALC_OP_LBL_2:      db " = "
+;   length of label for result
+CALC_OP_LBL_2_LEN:  equ ($ - CALC_OP_LBL_2)
+;   array of output labels
+CALC_OP_LBLS:       dq CALC_OP_LBL_0, CALC_OP_LBL_1, CALC_OP_LBL_2
+;   array of output label lengths
+CALC_OP_LBL_LENS:   dq CALC_OP_LBL_0_LEN, CALC_OP_LBL_1_LEN, CALC_OP_LBL_2_LEN
+;   #calculator outputs
+N_CALC_OPS:     equ (($ - CALC_OP_LBL_LENS)/QWORD_SIZE)
+;   ending label of calculator outputs
+CALC_OP_END_LBL:    db "."
+;   length of calculator output ending label
+CALC_OP_END_LBL_LEN:    equ ($ - CALC_OP_END_LBL)
 
 ; related to general user I/O
 ;   number of operations to allow
