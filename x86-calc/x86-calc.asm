@@ -3,8 +3,11 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.2.0 - 2022-06-29t18:36Q
+;       printing the sum
+;
 ;   v4.1.3 - 2022-06-29t18:25Q
-;       storing each integer
+;       calculator storing each integer
 ;
 ;   v4.1.2 - 2022-06-29t15:31Q
 ;       calculator echoing
@@ -242,6 +245,21 @@ CALC_NULL_CHECK_END:
     add  r11,QWORD_SIZE         ; next integer address
     loop CALC_PROMPT_LOOP       ; repeat
 CALC_PROMPT_END:
+    ; perform the arithmetic operation
+    mov  rax,IP_INT_ARR[0*QWORD_SIZE]       ; get the operand 0
+    mov  rdx,IP_INT_ARR[1*QWORD_SIZE]       ; get the operand 1
+    add  rax,rdx                ; perform addition
+    ; C equivalent: SIGN128(&rdx, rax);
+    ; rax already set
+    call SIGN128                ; extend the sign bit
+    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    mov  rdi,INT_STR_REP        ; set the result address
+    mov  rsi,OP_RADIX           ; set radix
+    call ITOA                   ; convert to a string
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
+    ; print the string representation of the integer
+    mov  rsi,rdi        ; move the string representation to print
+    call WRITELN        ; print the string representation of the integer
     ret
 ; end CALC
 
@@ -732,17 +750,17 @@ ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
 
 ; Calculator main:
 ;   prompt for user input for operand 1
-CALC_PROMPT_1:      db "Please enter the augend.", 0ah, "> "
+CALC_PROMPT_0:      db "Please enter the augend.", 0ah, "> "
 ;   length of operand 1 prompt
-CALC_PROMPT_1_LEN:  equ ($ - CALC_PROMPT_1)
+CALC_PROMPT_0_LEN:  equ ($ - CALC_PROMPT_0)
 ;   prompt for user input for operand 2
-CALC_PROMPT_2:      db "Please enter the addend.", 0ah, "> "
+CALC_PROMPT_1:      db "Please enter the addend.", 0ah, "> "
 ;   length of operand 2 prompt
-CALC_PROMPT_2_LEN:  equ ($ - CALC_PROMPT_2)
+CALC_PROMPT_1_LEN:  equ ($ - CALC_PROMPT_1)
 ;   array of calculator prompts
-CALC_PROMPTS:       dq CALC_PROMPT_1, CALC_PROMPT_2
+CALC_PROMPTS:       dq CALC_PROMPT_0, CALC_PROMPT_1
 ;   array of calculator prompt lengths
-CALC_PROMPT_LENS:   dq CALC_PROMPT_1_LEN, CALC_PROMPT_2_LEN
+CALC_PROMPT_LENS:   dq CALC_PROMPT_0_LEN, CALC_PROMPT_1_LEN
 ;   #calculator prompts
 N_CALC_PROMPTS:     equ (($ - CALC_PROMPT_LENS)/QWORD_SIZE)
 ;   status printed when program finishes
