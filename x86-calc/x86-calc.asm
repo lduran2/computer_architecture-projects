@@ -9,6 +9,9 @@
 ;   v4.3.0 - 2022-06-29t18:53Q
 ;       newlines after calculator prompts
 ;
+;   v4.2.3 - 2022-06-29t21:29Q
+;       moved input integers to stack vis-à-vis array IP_INT_ARR
+;
 ;   v4.2.2 - 2022-06-29t18:53Q
 ;       newlines after calculator prompts
 ;
@@ -241,15 +244,12 @@ CALC_INPUT:
     mov  r8,CALC_PROMPTS        ; initialize the prompt array address
     mov  r9,CALC_PROMPT_LENS    ; initialize the prompt length array address
     mov  r10,IP_CBUF            ; initialize running address of input buffer
-    mov  r11,IP_INT_ARR         ; initialize running address of
-                                ;   input integers
     mov  rcx,N_CALC_PROMPTS     ; number of prompts
 ; print each prompt
 CALC_PROMPT_LOOP:
     ; C equivalent:
     ; PROMPT_INPUT(&rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
     ;   CALC_PROMPT_LENS[N_CALC_PROMPTS - rcx]);
-    push r11            ; guard from syscall
     push rcx            ; guard from write changing rcx
     mov  rdi,r10                ; buffer address for storage
     mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
@@ -260,7 +260,6 @@ CALC_PROMPT_LOOP:
     mov  rdx,0                  ; 0 characters to print
     call WRITELN                ; print blank line
     pop  rcx            ; restore rcx
-    pop  r11            ; restore general purpose
     ; C equivalent: SEEKNE(&rdi, &ISSPACE);
     mov  rax,ISSPACE            ; use ISSPACE for seeking
     call SEEKNE                 ; find first non-space character
@@ -277,16 +276,15 @@ CALC_NULL_CHECK_END:
                                 ;   changing address in buffer
     ; store results
     mov  r10,rax                ; update running address
-    mov  [r11],rdi              ; store the new integer
+    push rdi                    ; store the new integer on stack
     ; iterate
     add  r8,QWORD_SIZE          ; next prompt
     add  r9,QWORD_SIZE          ; next length
-    add  r11,QWORD_SIZE         ; next integer address
     loop CALC_PROMPT_LOOP       ; repeat
 CALC_PROMPT_END:
     ; store the input
-    mov  rax,IP_INT_ARR[0*QWORD_SIZE]       ; get the operand 0
-    mov  rdx,IP_INT_ARR[1*QWORD_SIZE]       ; get the operand 1
+    pop  rdx                    ; pop operand 1 off stack
+    pop  rax                    ; pop operand 0 off stack
     ; cleanup
     pop  rcx                    ; restore counter
     pop  r11                    ; restore general purpose
@@ -846,8 +844,6 @@ section .bss
 REV_TEST_DST:   resb REV_LEN
 ; character buffer for input
 IP_CBUF:        resb IP_CBUF_LEN
-; array of input integers, corresponding to prompts
-IP_INT_ARR:     resq N_CALC_PROMPTS
 ; allocate space for string representations of integers
 INT_STR_REP:    resb INT_LEN
 
