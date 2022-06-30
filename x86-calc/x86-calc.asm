@@ -3,11 +3,17 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.3.1 - 2022-06-29t18:53Q
+;       abstracted CALC_OUTPUT
+;
+;   v4.3.0 - 2022-06-29t18:53Q
+;       newlines after calculator prompts
+;
 ;   v4.2.2 - 2022-06-29t18:53Q
-;       newlines after prompts
+;       newlines after calculator prompts
 ;
 ;   v4.2.1 - 2022-06-29t18:44Q
-;       abstract CALC_INPUT
+;       abstracted CALC_INPUT
 ;
 ;   v4.2.0 - 2022-06-29t18:36Q
 ;       printing the sum
@@ -208,27 +214,23 @@ CHOOSE_MODE_DEFAULT:
 
 ; Perform the calc program.
 CALC:
-    ; C equivalent: CALC_INPUT(&rdx, &rax)
+    ; C equivalent: CALC_INPUT(&rdx, &rax);
     call CALC_INPUT
     ; perform the arithmetic operation
+    mov  rcx,rax                ; backup operand 0 for printing
     add  rax,rdx                ; perform addition
-    ; C equivalent: SIGN128(&rdx, rax);
-    ; rax already set
-    call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
-    mov  rdi,INT_STR_REP        ; set the result address
-    mov  rsi,OP_RADIX           ; set radix
-    call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(INT_STR_REP, rdx);
-    ; print the string representation of the integer
-    mov  rsi,rdi        ; move the string representation to print
-    call WRITELN        ; print the string representation of the integer
+    ; C equivalent: CALC_OUTPUT(rcx, rdx, rax);
+    call CALC_OUTPUT
     ret
 ; end CALC
 
 
-; CALC_INPUT(&rdx, &rax)
+; CALC_INPUT(int *rdx, int *rax)
 ; Asks for and accepts the input for the calculator.
+; @param
+;   rdx : int *= address to store operand 1
+; @param
+;   rax : int *= address to store operand 0
 CALC_INPUT:
     push r8                     ; backup for prompt array address
     push r9                     ; backup for prompt length array address
@@ -245,7 +247,7 @@ CALC_INPUT:
 ; print each prompt
 CALC_PROMPT_LOOP:
     ; C equivalent:
-    ; PROMPT_INPUT(rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
+    ; PROMPT_INPUT(&rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
     ;   CALC_PROMPT_LENS[N_CALC_PROMPTS - rcx]);
     push r11            ; guard from syscall
     push rcx            ; guard from write changing rcx
@@ -254,6 +256,7 @@ CALC_PROMPT_LOOP:
     mov  rsi,[r8]               ; prompt to print
     mov  rcx,[r9]               ; #characters to print
     call PROMPT_INPUT           ; print the prompt
+    ; C equivalent: WRITELN(rdi, 0);
     mov  rdx,0                  ; 0 characters to print
     call WRITELN                ; print blank line
     pop  rcx            ; restore rcx
@@ -291,7 +294,38 @@ CALC_PROMPT_END:
     pop  r9                     ; restore general purpose
     pop  r8                     ; restore general purpose
     ret
-; end calc input
+; end CALC_INPUT
+
+
+; CALC_OUTPUT(int rcx, int rdx, int rax)
+; Prints the statement of the operation.
+; @param
+;   rcx : int = operand 0
+; @param
+;   rdx : int = operand 1
+; @param
+;   rax : int = result of operation
+CALC_OUTPUT:
+    push rdx                    ; backup operand 1 for sign
+    push rdi                    ; backup for result address
+    push rsi                    ; backup for radix
+    ; C equivalent: SIGN128(&rdx, rax);
+    ; rax already set
+    call SIGN128                ; extend the sign bit
+    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    mov  rdi,INT_STR_REP        ; set the result address
+    mov  rsi,OP_RADIX           ; set radix
+    call ITOA                   ; convert to a string
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
+    ; print the string representation of the integer
+    mov  rsi,rdi        ; move the string representation to print
+    call WRITELN        ; print the string representation of the integer
+    pop  rsi                    ; restore source index
+    pop  rdi                    ; restore destination index
+    pop  rdx                    ; restore data register
+    ret
+; end CALC_OUTPUT
+
 
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
