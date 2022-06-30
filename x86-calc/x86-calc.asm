@@ -3,6 +3,48 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.4.0 - 2022-06-30t03:05Q
+;       implemented calculator loop
+;
+;   v4.3.2 - 2022-06-30t00:12Q
+;       nicer calculator output
+;
+;   v4.3.1 - 2022-06-29t18:53Q
+;       abstracted CALC_OUTPUT
+;
+;   v4.3.0 - 2022-06-29t18:53Q
+;       newlines after calculator prompts
+;
+;   v4.2.3 - 2022-06-29t21:29Q
+;       moved input integers to stack vis-à-vis array IP_INT_ARR
+;
+;   v4.2.2 - 2022-06-29t18:53Q
+;       newlines after calculator prompts
+;
+;   v4.2.1 - 2022-06-29t18:44Q
+;       abstracted CALC_INPUT
+;
+;   v4.2.0 - 2022-06-29t18:36Q
+;       printing the sum
+;
+;   v4.1.3 - 2022-06-29t18:25Q
+;       calculator storing each integer
+;
+;   v4.1.2 - 2022-06-29t15:31Q
+;       calculator echoing
+;
+;   v4.1.1 - 2022-06-29t15:31Q
+;       confirming calculator input
+;
+;   v4.1.0 - 2022-06-29t03:09Q
+;       storing input for calculator
+;
+;   v4.0.1 - 2022-06-29t02:53Q
+;       clean up after generalized buffers
+;
+;   v4.0.0 - 2022-06-24t21:25Q
+;       printing both prompts
+;
 ;   v3.4.1 - 2022-06-29t02:34Q
 ;       handling ATOI of negative input
 ;
@@ -181,20 +223,177 @@ CHOOSE_MODE_DEFAULT:
 
 ; Perform the calc program.
 CALC:
+    mov  rsi,IP_CBUF            ; initialize running address of input buffer
+CALC_LOOP:
+    ; C equivalent: CALC_INPUT(&rdx, &rax);
+    call CALC_INPUT             ; get user input for calculator
+    test rcx,-1                 ; check count as error code
+    jne  CALC_END               ; if error, then end
+    ; perform the arithmetic operation
+    mov  rcx,rax                ; backup operand 0 for printing
+    add  rax,rdx                ; perform addition
+    ; C equivalent: CALC_OUTPUT(rcx, rdx, rax);
+    call CALC_OUTPUT            ; output the results
+    jmp  CALC_LOOP              ; repeat until no more input
+CALC_END:
     ret
 ; end CALC
+
+
+; CALC_INPUT(char **rsi, int *rcx, int *rdx, int *rax)
+; Asks for and accepts the input for the calculator.
+; @param
+;   rsi : char **= running address in input buffer
+; @param
+;   rcx : int *= error code:
+;                   0 if both operands read;
+;                   otherwise, (2 - (#operands read))
+; @param
+;   rdx : int *= address to store operand 1
+; @param
+;   rax : int *= address to store operand 0
+CALC_INPUT:
+    push r8                     ; backup for prompt array address
+    push r9                     ; backup for prompt length array address
+    push r10                    ; backup for address of input buffer
+    push r11                    ; backup for address of input integers
+    push rdi                    ; backup destination index for various uses
+    ; initializations
+    mov  r8,CALC_PROMPTS        ; initialize the prompt array address
+    mov  r9,CALC_PROMPT_LENS    ; initialize the prompt length array address
+    mov  r10,rsi                ; initialize running address of input buffer
+    mov  rcx,N_CALC_PROMPTS     ; number of prompts
+; print each prompt
+CALC_INPUT_LOOP:
+    ; C equivalent:
+    ; PROMPT_INPUT(&rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
+    ;   CALC_PROMPT_LENS[N_CALC_PROMPTS - rcx]);
+    push rcx            ; guard from write changing rcx
+    mov  rdi,r10                ; buffer address for storage
+    mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
+    mov  rsi,[r8]               ; prompt to print
+    mov  rcx,[r9]               ; #characters to print
+    call PROMPT_INPUT           ; print the prompt
+    ; C equivalent: WRITELN(rdi, 0);
+    mov  rdx,0                  ; 0 characters to print
+    call WRITELN                ; print blank line
+    pop  rcx            ; restore rcx
+    ; C equivalent: SEEKNE(&rdi, &ISSPACE);
+    mov  rax,ISSPACE            ; use ISSPACE for seeking
+    call SEEKNE                 ; find first non-space character
+    ; check if the current character is null
+CALC_INPUT_NULL_CHECK:
+    mov  rsi,[rdi]          ; get the current character
+    test rsi,7fh            ; check if null character
+    je   CALC_INPUT_END     ; break if all 0 ASCII bits
+CALC_INPUT_NULL_CHECK_END:
+    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
+    mov  rsi,IP_RADIX           ; set radix
+    mov  rax,rdi                ; parse from IP_CBUF
+    call ATOI_SEEK              ; convert to integer,
+                                ;   changing address in buffer
+    ; store results
+    mov  r10,rax                ; update running address
+    push rdi                    ; store the new integer on stack
+    ; iterate
+    add  r8,QWORD_SIZE          ; next prompt
+    add  r9,QWORD_SIZE          ; next length
+    loop CALC_INPUT_LOOP        ; repeat
+CALC_INPUT_END:
+    ; store the input
+    mov  rsi,r10                ; store running address
+    pop  rdx                    ; pop operand 1 off stack
+    pop  rax                    ; pop operand 0 off stack
+    ; cleanup
+    pop  rdi                    ; restore destination index
+    pop  r11                    ; restore general purpose
+    pop  r10                    ; restore general purpose
+    pop  r9                     ; restore general purpose
+    pop  r8                     ; restore general purpose
+    ret
+; end CALC_INPUT
+
+
+; CALC_OUTPUT(int rcx, int rdx, int rax)
+; Prints the statement of the operation.
+; @param
+;   rcx : int = operand 0
+; @param
+;   rdx : int = operand 1
+; @param
+;   rax : int = result of operation
+CALC_OUTPUT:
+    push r8                     ; backup for label array address
+    push r9                     ; backup for label length array address
+    push rdi                    ; backup for result address
+    push rsi                    ; backup for radix
+    ; we push the parameters in reverse
+    push rax                    ; backup result
+    push rdx                    ; backup operand 1 for sign
+    push rcx                    ; backup operand 0
+    ; initialize for loop
+    mov  r8,CALC_OP_LBLS        ; initialize the label array address
+    mov  r9,CALC_OP_LBL_LENS    ; initialize the label length array address
+    mov  rcx,N_CALC_OPS         ; number of outputs
+; loop through zipped labels and outputs
+CALC_OUTPUT_LOOP:
+    push rcx            ; guard from write changing rcx
+    ; first print the label
+    ; C equivalent: write(1, *r8, *r9);
+    ; print the prompt to standard output
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    mov  rsi,[r8]       ; ready label to print
+    mov  rdx,[r9]       ; number of characters to print
+    syscall     ; execute the system call
+    pop  rcx            ; restore rcx
+    ; next print the output
+    pop  rax                    ; pop next output
+    ; C equivalent: SIGN128(&rdx, rax);
+    ; rax already set
+    call SIGN128                ; extend the sign bit
+    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    mov  rdi,INT_STR_REP        ; set the result address
+    mov  rsi,OP_RADIX           ; set radix
+    call ITOA                   ; convert to a string
+    ; C equivalent: write(1, rdi, rdx);
+    push rcx            ; guard from write changing rcx
+    mov  rsi,rdi        ; print the string representation
+    mov  rax,1          ; system call to perform: sys_write
+    mov  rdi,1          ; file descriptor to which to print, namely:
+                        ; STDOUT (standard output)
+    ; length rdx already set
+    syscall     ; execute the system call
+    pop  rcx            ; restore rcx
+    ; iterate
+    add  r8,QWORD_SIZE          ; next label
+    add  r9,QWORD_SIZE          ; next length
+    loop CALC_OUTPUT_LOOP       ; loop until no next output
+CALC_OUTPUT_END:
+    ; end the printed statement
+    ; C equivalent: WRITELN(CALC_OP_END_LBL, CALC_OP_END_LBL_LEN);
+    mov  rsi,CALC_OP_END_LBL        ; move end label to print
+    mov  rdx,CALC_OP_END_LBL_LEN    ; length of end label
+    call WRITELN                    ; print end label
+    pop  rsi                    ; restore source index
+    pop  rdi                    ; restore destination index
+    pop  r9                     ; restore general purpose
+    pop  r8                     ; restore general purpose
+    ret
+; end CALC_OUTPUT
 
 
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
     mov  rcx,2          ; count 2 times
-    mov  r8,IP_BUFF     ; initialize running address of input buffer
+    mov  r8,IP_CBUF     ; initialize running address of input buffer
 TEST_ATOI_LOOP:
     ; C equivalent:
-    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, IP_BUFF_LEN, ECHO_PROMPT_LEN);
+    ;   PROMPT_INPUT(rdi, ECHO_PROMPT, IP_CBUF_LEN, ECHO_PROMPT_LEN);
     push rcx            ; guard from write changing rcx
     mov  rdi,r8                 ; buffer address for storage
-    mov  rdx,IP_BUFF_LEN        ; acceptable buffer length
+    mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
     mov  rsi,ECHO_PROMPT        ; prompt to print
     mov  rcx,ECHO_PROMPT_LEN    ; length of the prompt
     call PROMPT_INPUT           ; prompt for and accept integer to echo
@@ -210,7 +409,7 @@ TEST_ATOI_NULL_CHECK:
 TEST_ATOI_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
-    mov  rax,rdi                ; parse from IP_BUFF
+    mov  rax,rdi                ; parse from IP_CBUF
     call ATOI_SEEK
     ; update running address
     mov  r8,rax
@@ -646,7 +845,7 @@ OP_RADIX:       equ 10
 ;   1 - test STRREV string reverser
 ;   2 - test itoa (integer to ASCII) for printing integers
 ;   3 - test atoi (ASCII to integer) for parse and echo
-PROGRAM_MODE:   equ 3
+PROGRAM_MODE:   equ 0
 
 ; String reverse test:
 ;   string to be reversed
@@ -669,12 +868,51 @@ ECHO_PROMPT:    db "Please enter an integer in [-2^63, (2^63 - 1)].", 0ah, "> "
 ;   length of prompt
 ECHO_PROMPT_LEN:    equ ($ - ECHO_PROMPT)
 
+; Calculator input:
+;   prompt for user input for operand 1
+CALC_PROMPT_0:      db "Please enter the augend.", 0ah, "> "
+;   length of operand 1 prompt
+CALC_PROMPT_0_LEN:  equ ($ - CALC_PROMPT_0)
+;   prompt for user input for operand 2
+CALC_PROMPT_1:      db "Please enter the addend.", 0ah, "> "
+;   length of operand 2 prompt
+CALC_PROMPT_1_LEN:  equ ($ - CALC_PROMPT_1)
+;   array of calculator prompts
+CALC_PROMPTS:       dq CALC_PROMPT_0, CALC_PROMPT_1
+;   array of calculator prompt lengths
+CALC_PROMPT_LENS:   dq CALC_PROMPT_0_LEN, CALC_PROMPT_1_LEN
+;   #calculator prompts
+N_CALC_PROMPTS:     equ (($ - CALC_PROMPT_LENS)/QWORD_SIZE)
+
+; Calculator output:
+;   label for operand 0
+CALC_OP_LBL_0:      db ""
+;   length of label for operand 0
+CALC_OP_LBL_0_LEN:  equ ($ - CALC_OP_LBL_0)
+;   label for operand 1
+CALC_OP_LBL_1:      db " + "
+;   length of label for operand 1
+CALC_OP_LBL_1_LEN:  equ ($ - CALC_OP_LBL_1)
+;   label for result
+CALC_OP_LBL_2:      db " = "
+;   length of label for result
+CALC_OP_LBL_2_LEN:  equ ($ - CALC_OP_LBL_2)
+;   array of output labels
+CALC_OP_LBLS:       dq CALC_OP_LBL_0, CALC_OP_LBL_1, CALC_OP_LBL_2
+;   array of output label lengths
+CALC_OP_LBL_LENS:   dq CALC_OP_LBL_0_LEN, CALC_OP_LBL_1_LEN, CALC_OP_LBL_2_LEN
+;   #calculator outputs
+N_CALC_OPS:     equ (($ - CALC_OP_LBL_LENS)/QWORD_SIZE)
+;   ending label of calculator outputs
+CALC_OP_END_LBL:    db "."
+;   length of calculator output ending label
+CALC_OP_END_LBL_LEN:    equ ($ - CALC_OP_END_LBL)
 
 ; related to general user I/O
 ;   number of operations to allow
 N_OPERATIONS:   equ 256
 ;   length of input buffer (2 integers/operation)
-IP_BUFF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
+IP_CBUF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
 ;   status printed when program finishes
 DONE:           db "Done."
 ;   length of DONE status
@@ -686,8 +924,8 @@ DONE_LEN:       equ ($ - DONE)
 section .bss
 ; allocate space for reverser test results
 REV_TEST_DST:   resb REV_LEN
-; buffer for input
-IP_BUFF:        resb IP_BUFF_LEN
+; character buffer for input
+IP_CBUF:        resb IP_CBUF_LEN
 ; allocate space for string representations of integers
 INT_STR_REP:    resb INT_LEN
 
