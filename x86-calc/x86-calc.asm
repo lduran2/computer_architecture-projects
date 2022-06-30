@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.4.0 - 2022-06-30t03:05Q
+;       implemented calculator loop
+;
 ;   v4.3.2 - 2022-06-30t00:12Q
 ;       nicer calculator output
 ;
@@ -220,19 +223,31 @@ CHOOSE_MODE_DEFAULT:
 
 ; Perform the calc program.
 CALC:
+    mov  rsi,IP_CBUF            ; initialize running address of input buffer
+CALC_LOOP:
     ; C equivalent: CALC_INPUT(&rdx, &rax);
-    call CALC_INPUT
+    call CALC_INPUT             ; get user input for calculator
+    test rcx,-1                 ; check count as error code
+    jne  CALC_END               ; if error, then end
     ; perform the arithmetic operation
     mov  rcx,rax                ; backup operand 0 for printing
     add  rax,rdx                ; perform addition
     ; C equivalent: CALC_OUTPUT(rcx, rdx, rax);
-    call CALC_OUTPUT
+    call CALC_OUTPUT            ; output the results
+    jmp  CALC_LOOP              ; repeat until no more input
+CALC_END:
     ret
 ; end CALC
 
 
-; CALC_INPUT(int *rdx, int *rax)
+; CALC_INPUT(char **rsi, int *rcx, int *rdx, int *rax)
 ; Asks for and accepts the input for the calculator.
+; @param
+;   rsi : char **= running address in input buffer
+; @param
+;   rcx : int *= error code:
+;                   0 if both operands read;
+;                   otherwise, (2 - (#operands read))
 ; @param
 ;   rdx : int *= address to store operand 1
 ; @param
@@ -242,14 +257,14 @@ CALC_INPUT:
     push r9                     ; backup for prompt length array address
     push r10                    ; backup for address of input buffer
     push r11                    ; backup for address of input integers
-    push rcx                    ; backup for number of prompts
+    push rdi                    ; backup destination index for various uses
     ; initializations
     mov  r8,CALC_PROMPTS        ; initialize the prompt array address
     mov  r9,CALC_PROMPT_LENS    ; initialize the prompt length array address
-    mov  r10,IP_CBUF            ; initialize running address of input buffer
+    mov  r10,rsi                ; initialize running address of input buffer
     mov  rcx,N_CALC_PROMPTS     ; number of prompts
 ; print each prompt
-CALC_PROMPT_LOOP:
+CALC_INPUT_LOOP:
     ; C equivalent:
     ; PROMPT_INPUT(&rdi, CALC_PROMPTS[N_CALC_PROMPTS - rcx], IP_CBUF_LEN,
     ;   CALC_PROMPT_LENS[N_CALC_PROMPTS - rcx]);
@@ -267,11 +282,11 @@ CALC_PROMPT_LOOP:
     mov  rax,ISSPACE            ; use ISSPACE for seeking
     call SEEKNE                 ; find first non-space character
     ; check if the current character is null
-CALC_NULL_CHECK:
+CALC_INPUT_NULL_CHECK:
     mov  rsi,[rdi]          ; get the current character
     test rsi,7fh            ; check if null character
-    je   CALC_PROMPT_END    ; break if all 0 ASCII bits
-CALC_NULL_CHECK_END:
+    je   CALC_INPUT_END     ; break if all 0 ASCII bits
+CALC_INPUT_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
     mov  rax,rdi                ; parse from IP_CBUF
@@ -283,13 +298,14 @@ CALC_NULL_CHECK_END:
     ; iterate
     add  r8,QWORD_SIZE          ; next prompt
     add  r9,QWORD_SIZE          ; next length
-    loop CALC_PROMPT_LOOP       ; repeat
-CALC_PROMPT_END:
+    loop CALC_INPUT_LOOP        ; repeat
+CALC_INPUT_END:
     ; store the input
+    mov  rsi,r10                ; store running address
     pop  rdx                    ; pop operand 1 off stack
     pop  rax                    ; pop operand 0 off stack
     ; cleanup
-    pop  rcx                    ; restore counter
+    pop  rdi                    ; restore destination index
     pop  r11                    ; restore general purpose
     pop  r10                    ; restore general purpose
     pop  r9                     ; restore general purpose
