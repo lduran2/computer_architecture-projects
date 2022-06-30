@@ -3,7 +3,10 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
-;   v4.2.1 - 2022-06-29t18:36Q
+;   v4.2.2 - 2022-06-29t18:53Q
+;       newlines after prompts
+;
+;   v4.2.1 - 2022-06-29t18:44Q
 ;       abstract CALC_INPUT
 ;
 ;   v4.2.0 - 2022-06-29t18:36Q
@@ -251,6 +254,8 @@ CALC_PROMPT_LOOP:
     mov  rsi,[r8]               ; prompt to print
     mov  rcx,[r9]               ; #characters to print
     call PROMPT_INPUT           ; print the prompt
+    mov  rdx,0                  ; 0 characters to print
+    call WRITELN                ; print blank line
     pop  rcx            ; restore rcx
     pop  r11            ; restore general purpose
     ; C equivalent: SEEKNE(&rdi, &ISSPACE);
