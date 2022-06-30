@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.2.1 - 2022-06-29t18:36Q
+;       abstract CALC_INPUT
+;
 ;   v4.2.0 - 2022-06-29t18:36Q
 ;       printing the sum
 ;
@@ -202,6 +205,34 @@ CHOOSE_MODE_DEFAULT:
 
 ; Perform the calc program.
 CALC:
+    ; C equivalent: CALC_INPUT(&rdx, &rax)
+    call CALC_INPUT
+    ; perform the arithmetic operation
+    add  rax,rdx                ; perform addition
+    ; C equivalent: SIGN128(&rdx, rax);
+    ; rax already set
+    call SIGN128                ; extend the sign bit
+    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    mov  rdi,INT_STR_REP        ; set the result address
+    mov  rsi,OP_RADIX           ; set radix
+    call ITOA                   ; convert to a string
+    ; C equivalent: WRITELN(INT_STR_REP, rdx);
+    ; print the string representation of the integer
+    mov  rsi,rdi        ; move the string representation to print
+    call WRITELN        ; print the string representation of the integer
+    ret
+; end CALC
+
+
+; CALC_INPUT(&rdx, &rax)
+; Asks for and accepts the input for the calculator.
+CALC_INPUT:
+    push r8                     ; backup for prompt array address
+    push r9                     ; backup for prompt length array address
+    push r10                    ; backup for address of input buffer
+    push r11                    ; backup for address of input integers
+    push rcx                    ; backup for number of prompts
+    ; initializations
     mov  r8,CALC_PROMPTS        ; initialize the prompt array address
     mov  r9,CALC_PROMPT_LENS    ; initialize the prompt length array address
     mov  r10,IP_CBUF            ; initialize running address of input buffer
@@ -245,24 +276,17 @@ CALC_NULL_CHECK_END:
     add  r11,QWORD_SIZE         ; next integer address
     loop CALC_PROMPT_LOOP       ; repeat
 CALC_PROMPT_END:
-    ; perform the arithmetic operation
+    ; store the input
     mov  rax,IP_INT_ARR[0*QWORD_SIZE]       ; get the operand 0
     mov  rdx,IP_INT_ARR[1*QWORD_SIZE]       ; get the operand 1
-    add  rax,rdx                ; perform addition
-    ; C equivalent: SIGN128(&rdx, rax);
-    ; rax already set
-    call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
-    mov  rdi,INT_STR_REP        ; set the result address
-    mov  rsi,OP_RADIX           ; set radix
-    call ITOA                   ; convert to a string
-    ; C equivalent: WRITELN(INT_STR_REP, rdx);
-    ; print the string representation of the integer
-    mov  rsi,rdi        ; move the string representation to print
-    call WRITELN        ; print the string representation of the integer
+    ; cleanup
+    pop  rcx                    ; restore counter
+    pop  r11                    ; restore general purpose
+    pop  r10                    ; restore general purpose
+    pop  r9                     ; restore general purpose
+    pop  r8                     ; restore general purpose
     ret
-; end CALC
-
+; end calc input
 
 ; Test the ATOI function by parse and echo
 TEST_ATOI:
