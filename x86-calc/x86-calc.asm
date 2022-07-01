@@ -3,6 +3,12 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.4.2 - 2022-07-01t02:11Q
+;       optimized CALC_INPUT_LOOP
+;
+;   v4.4.1 - 2022-07-01t01:55Q
+;       fixed SEGFAULT: popping beyond input
+;
 ;   v4.4.0 - 2022-06-30t03:05Q
 ;       implemented calculator loop
 ;
@@ -236,6 +242,13 @@ CALC_LOOP:
     call CALC_OUTPUT            ; output the results
     jmp  CALC_LOOP              ; repeat until no more input
 CALC_END:
+    ; newline
+    mov  rdx,0          ; 0 characters
+    call WRITELN
+    ; report DONE
+    mov  rsi,DONE       ; load DONE status
+    mov  rdx,DONE_LEN   ; length of DONE status
+    call WRITELN
     ret
 ; end CALC
 
@@ -285,7 +298,15 @@ CALC_INPUT_LOOP:
 CALC_INPUT_NULL_CHECK:
     mov  rsi,[rdi]          ; get the current character
     test rsi,7fh            ; check if null character
-    je   CALC_INPUT_END     ; break if all 0 ASCII bits
+    jne   CALC_INPUT_NULL_CHECK_END ; if not, continue past null check
+    mov  rsi,rcx                ; backup count
+    ; push dummy values in case input ran out
+CALC_PUSH_DUMMY_LOOP:
+    push rcx                    ; push some value (I chose count to debug)
+    loop CALC_PUSH_DUMMY_LOOP   ; loop until count resets
+    mov  rcx,rsi                ; restore count
+CALC_PUSH_DUMMY_END:
+    jmp   CALC_INPUT_END    ; break out of loop
 CALC_INPUT_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
@@ -376,6 +397,9 @@ CALC_OUTPUT_END:
     mov  rsi,CALC_OP_END_LBL        ; move end label to print
     mov  rdx,CALC_OP_END_LBL_LEN    ; length of end label
     call WRITELN                    ; print end label
+    ; newline
+    mov  rdx,0          ; 0 characters
+    call WRITELN
     pop  rsi                    ; restore source index
     pop  rdi                    ; restore destination index
     pop  r9                     ; restore general purpose
@@ -911,8 +935,8 @@ CALC_OP_END_LBL_LEN:    equ ($ - CALC_OP_END_LBL)
 ; related to general user I/O
 ;   number of operations to allow
 N_OPERATIONS:   equ 256
-;   length of input buffer (2 integers/operation)
-IP_CBUF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
+;   length of input buffer (2 space-separated integers/operation)
+IP_CBUF_LEN:    equ (N_OPERATIONS * (2 * (INT_LEN + 1)))
 ;   status printed when program finishes
 DONE:           db "Done."
 ;   length of DONE status
