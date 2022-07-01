@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.4.2 - 2022-07-01t02:11Q
+;       optimized CALC_INPUT_LOOP
+;
 ;   v4.4.1 - 2022-07-01t01:55Q
 ;       fixed SEGFAULT: popping beyond input
 ;
@@ -295,7 +298,15 @@ CALC_INPUT_LOOP:
 CALC_INPUT_NULL_CHECK:
     mov  rsi,[rdi]          ; get the current character
     test rsi,7fh            ; check if null character
-    je   CALC_INPUT_END     ; break if all 0 ASCII bits
+    jne   CALC_INPUT_NULL_CHECK_END ; if not, continue past null check
+    mov  rsi,rcx                ; backup count
+    ; push dummy values in case input ran out
+CALC_PUSH_DUMMY_LOOP:
+    push rcx                    ; push some value (I chose count to debug)
+    loop CALC_PUSH_DUMMY_LOOP   ; loop until count resets
+    mov  rcx,rsi                ; restore count
+CALC_PUSH_DUMMY_END:
+    jmp   CALC_INPUT_END    ; break out of loop
 CALC_INPUT_NULL_CHECK_END:
     ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
     mov  rsi,IP_RADIX           ; set radix
@@ -309,15 +320,7 @@ CALC_INPUT_NULL_CHECK_END:
     add  r8,QWORD_SIZE          ; next prompt
     add  r9,QWORD_SIZE          ; next length
     loop CALC_INPUT_LOOP        ; repeat
-    jmp  CALC_PUSH_DUMMY_END    ; skip pushing dummy values
 CALC_INPUT_END:
-    mov  rsi,rcx                ; backup count
-    ; push dummy values in case input ran out
-CALC_PUSH_DUMMY_LOOP:
-    push rcx                    ; push some value (I chose count to debug)
-    loop CALC_PUSH_DUMMY_LOOP   ; loop until count resets
-    mov  rcx,rsi                ; restore count
-CALC_PUSH_DUMMY_END:
     ; store the input
     mov  rsi,r10                ; store running address
     pop  rdx                    ; pop operand 1 off stack
@@ -394,6 +397,9 @@ CALC_OUTPUT_END:
     mov  rsi,CALC_OP_END_LBL        ; move end label to print
     mov  rdx,CALC_OP_END_LBL_LEN    ; length of end label
     call WRITELN                    ; print end label
+    ; newline
+    mov  rdx,0          ; 0 characters
+    call WRITELN
     pop  rsi                    ; restore source index
     pop  rdi                    ; restore destination index
     pop  r9                     ; restore general purpose
