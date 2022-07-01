@@ -3,6 +3,9 @@
 ; Addition calculator program.
 ;
 ; CHANGELOG :
+;   v4.4.1 - 2022-07-01t01:55Q
+;       fixed SEGFAULT: popping beyond input
+;
 ;   v4.4.0 - 2022-06-30t03:05Q
 ;       implemented calculator loop
 ;
@@ -236,6 +239,13 @@ CALC_LOOP:
     call CALC_OUTPUT            ; output the results
     jmp  CALC_LOOP              ; repeat until no more input
 CALC_END:
+    ; newline
+    mov  rdx,0          ; 0 characters
+    call WRITELN
+    ; report DONE
+    mov  rsi,DONE       ; load DONE status
+    mov  rdx,DONE_LEN   ; length of DONE status
+    call WRITELN
     ret
 ; end CALC
 
@@ -299,7 +309,15 @@ CALC_INPUT_NULL_CHECK_END:
     add  r8,QWORD_SIZE          ; next prompt
     add  r9,QWORD_SIZE          ; next length
     loop CALC_INPUT_LOOP        ; repeat
+    jmp  CALC_PUSH_DUMMY_END    ; skip pushing dummy values
 CALC_INPUT_END:
+    mov  rsi,rcx                ; backup count
+    ; push dummy values in case input ran out
+CALC_PUSH_DUMMY_LOOP:
+    push rcx                    ; push some value (I chose count to debug)
+    loop CALC_PUSH_DUMMY_LOOP   ; loop until count resets
+    mov  rcx,rsi                ; restore count
+CALC_PUSH_DUMMY_END:
     ; store the input
     mov  rsi,r10                ; store running address
     pop  rdx                    ; pop operand 1 off stack
@@ -911,8 +929,8 @@ CALC_OP_END_LBL_LEN:    equ ($ - CALC_OP_END_LBL)
 ; related to general user I/O
 ;   number of operations to allow
 N_OPERATIONS:   equ 256
-;   length of input buffer (2 integers/operation)
-IP_CBUF_LEN:    equ (N_OPERATIONS * (2 * INT_LEN))
+;   length of input buffer (2 space-separated integers/operation)
+IP_CBUF_LEN:    equ (N_OPERATIONS * (2 * (INT_LEN + 1)))
 ;   status printed when program finishes
 DONE:           db "Done."
 ;   length of DONE status
