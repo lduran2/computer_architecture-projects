@@ -1,0 +1,179 @@
+v5.0.0 - 2022-07-07t18:43
+    cleaned out unit test code
+
+v4.4.2 - 2022-07-01t02:11Q
+    optimized PROMPT_AND_GET_INPUT_LOOP
+
+v4.4.1 - 2022-07-01t01:55Q
+    fixed SEGFAULT: popping beyond input
+
+v4.4.0 - 2022-06-30t03:05Q
+    implemented calculator loop
+
+v4.3.2 - 2022-06-30t00:12Q
+    nicer calculator output
+
+v4.3.1 - 2022-06-29t18:53Q
+    abstracted TO_STRING_AND_PRINT
+
+v4.3.0 - 2022-06-29t18:53Q
+    newlines after calculator prompts
+
+v4.2.3 - 2022-06-29t21:29Q
+    moved input integers to stack vis-à-vis array IP_INT_ARR
+
+v4.2.2 - 2022-06-29t18:53Q
+    newlines after calculator prompts
+
+v4.2.1 - 2022-06-29t18:44Q
+    abstracted PROMPT_AND_GET_INPUT
+
+v4.2.0 - 2022-06-29t18:36Q
+    printing the sum
+
+v4.1.3 - 2022-06-29t18:25Q
+    calculator storing each integer
+
+v4.1.2 - 2022-06-29t15:31Q
+    calculator echoing
+
+v4.1.1 - 2022-06-29t15:31Q
+    confirming calculator input
+
+v4.1.0 - 2022-06-29t03:09Q
+    storing input for calculator
+
+v4.0.1 - 2022-06-29t02:53Q
+    clean up after generalized buffers
+
+v4.0.0 - 2022-06-24t21:25Q
+    printing both prompts
+
+v3.4.1 - 2022-06-29t02:34Q
+    handling ATOI of negative input
+
+v3.4.0 - 2022-06-29t02:12Q
+    done generalizing, fix allocating buffers
+
+v3.3.2 - 2022-06-24t18:50Q
+    fixed space/null order in TEST_ATOI
+    consistent checking for ASCII characters
+
+v3.3.1 - 2022-06-24t18:50Q
+    ATOI demo complete
+
+v3.3.0 - 2022-06-24t18:34Q
+    implemented character seeking
+
+v3.2.3 - 2022-06-24t15:57Q
+    running input address for ATOI
+
+v3.2.2 - 2022-06-24t02:06Q
+    updated TEST_ATOI to use WRITELN
+
+v3.2.1 - 2022-06-23t21:01Q
+    abstracted ATOI_SEEK, PROMPT_INPUT
+
+v3.2.0 - 2022-06-23t19:35Q
+    ATOI stops at first space character
+
+v3.1.6 - 2022-06-22t19:10Q
+    different radix for I/P, O/P
+
+v3.1.5 - 2022-06-22t19:10Q
+    ATOI digit placing
+
+v3.1.4 - 2022-06-22t18:40Q
+    ATOI = sum of digits
+    filtering out digits
+
+v3.1.3 - 2022-06-22t17:36Q
+    ATOI = last digit
+
+v3.1.2 - 2022-06-22t13:37Q
+    mock ATOI=0, fixed string rep to print
+
+v3.1.1 - 2022-06-22t13:21Q
+    setting up calls needed for TEST_ATOI
+
+v3.1.0 - 2022-06-22t03:26Q
+    just printing input with no processing
+
+v3.0.0 - 2022-06-22t03:17Q
+    prompt for parse and echo (ATOI test)
+
+v2.9.3 - 2022-06-26t19:10Q
+    generalized ITOA_TEST_DST for reuse
+    more thorough documentation for .data and .bss
+
+v2.9.2 - 2022-06-24t01:38Q
+    updated TEST_ITOA to use WRITELN
+
+v2.9.1 - 2022-06-22t13:47Q
+    just use high quad word for sign flag
+
+v2.9.0 - 2022-06-22t02:28Q
+    ITOA pushes digits, inlines STRREV_POP_INIT
+
+v2.8.0 - 2022-06-22t01:50Q
+    any positive radix for ITOA
+
+v2.7.0 - 2022-06-22t01:24Q
+    fixed ITOA string order
+
+v2.6.0 - 2022-06-21t23:13Q
+    handling sign of integers
+
+v2.5.0 - 2022-06-21t20:58Q
+    backwards ITOA for ints{+}
+
+v2.4.0 - 2022-06-21t19:40Q
+    optimized ITOA_DIVIDE_INT_LOOP: test quotient, not cmp
+
+v2.3.2 - 2022-06-21t19:44Q
+    proper handling of sign bit in ITOA
+
+v2.3.1 - 2022-06-21t04:39Q
+    counting digits (< 10)
+    fixed ITOA choose
+    ITOA test call
+
+v2.3.0 - 2022-06-21t03:18Q
+    ITOA division loop conditions
+
+v2.1.1 - 2022-06-17t01:59Q
+    documentation: ITOA, STRREV
+
+v2.1.0 - 2022-06-17t01:49Q
+    loading ITOA demos
+
+v2.0.0 - 2022-06-16t17:42Q
+    ready to print ITOA demos
+
+v1.4.0 - 2022-06-29t01:47Q
+    fixed allocation (times->resb)
+
+v1.3.2 - 2022-06-24t01:20Q
+    fixed syscall, pop, ret in WRITELN
+
+v1.3.1 - 2022-06-24t01:02Q
+    abstracted WRITELN
+
+v1.3.0 - 2022-06-22t00:28Q
+    reverser can now be out of place
+
+v1.2.0 - 2022-06-16t02:31Q
+    demos for ITOA
+
+v1.1.0 - 2022-06-16t01:57Q
+    added program modes
+
+v1.0.0 - 2022-06-16t01:29Q
+    reversing strings successfully
+
+v0.1.0 - 2022-06-15t22:00Q
+    counters for reverse push, pop loops
+
+v0.0.0 - 2022-06-15t01:29Q
+    "Hello world" implementation
+
