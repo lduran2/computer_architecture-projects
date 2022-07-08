@@ -27,8 +27,8 @@ MAIN_LOOP:
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
     ; exit without error
-    mov  rax,60         ; system call to perform: sys_exit
-    mov  rdi,0          ; errorlevel (0 = EXIT_SUCCESS)
+    mov  rax,sys_exit       ; system call to perform
+    mov  rdi,EXIT_SUCCESS   ; exit with no errors
     syscall     ; execute the system call
 ; end _start
 
@@ -135,16 +135,15 @@ TO_STRING_AND_PRINT:
     ; initialize for loop
     mov  r8,OP_LBLS             ; initialize the label array address
     mov  r9,OP_LBL_LENS         ; initialize the label length array address
-    mov  rcx,N_OP_LBLS          ; number of outputs
+    mov  rcx,N_OPS              ; number of outputs
 ; loop through zipped labels and outputs
 TO_STRING_AND_PRINT_LOOP:
     push rcx            ; guard from write changing rcx
     ; first print the label
-    ; C equivalent: write(1, *r8, *r9);
+    ; C equivalent: write(FD_STDOUT, *r8, *r9);
     ; print the prompt to standard output
-    mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
     mov  rsi,[r8]       ; ready label to print
     mov  rdx,[r9]       ; number of characters to print
     syscall     ; execute the system call
@@ -158,12 +157,11 @@ TO_STRING_AND_PRINT_LOOP:
     mov  rdi,INT_STR_REP        ; set the result address
     mov  rsi,OP_RADIX           ; set radix
     call ITOA                   ; convert to a string
-    ; C equivalent: write(1, rdi, rdx);
+    ; C equivalent: write(FD_STDOUT, rdi, rdx);
     push rcx            ; guard from write changing rcx
     mov  rsi,rdi        ; print the string representation
-    mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
     ; length rdx already set
     syscall     ; execute the system call
     pop  rcx            ; restore rcx
@@ -201,15 +199,14 @@ WRITELN:
     push rdx            ; backup the size of the string
     push rax            ; backup to hold the system call
     push rdi            ; backup to hold the file descriptor
-    ; C equivalent: write(1, rsi, rdx);
+    ; C equivalent: write(FD_STDOUT, rsi, rdx);
     ; print the string in rsi
-    mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
     syscall     ; execute the system call
-    ; C equivalent: write(1, ENDL, 1);
+    ; C equivalent: write(FD_STDOUT, ENDL, 1);
     ; print the newline
-    mov  rax,1          ; system call to perform: sys_write
+    mov  rax,sys_write  ; system call to perform
     mov  rsi,ENDL       ; newline to print
     mov  rdx,1          ; 1 character to print
     syscall     ; execute the system call
@@ -242,19 +239,17 @@ PROMPT_INPUT:
     push r9             ; backup general purpose r9 for input length
     mov  r8,rdi         ; backup input buffer address
     mov  r9,rdx         ; backup input buffer length
-    ; C equivalent: write(1, rsi, rcx);
+    ; C equivalent: write(FD_STDOUT, rsi, rcx);
     ; print the prompt to standard output
-    mov  rax,1          ; system call to perform: sys_write
-    mov  rdi,1          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
     ; prompt is alread at rsi
     mov  rdx,rcx        ; length of the prompt
     syscall     ; execute the system call
-    ; C equivalent: read(0, r8, r9);
+    ; C equivalent: read(FD_STDIN, r8, r9);
     ; accept user input into r8
-    mov  rax,0          ; system call to perform: sys_read
-    mov  rdi,0          ; file descriptor to which to print, namely:
-                        ; STDOUT (standard output)
+    mov  rax,sys_read   ; system call to perform
+    mov  rdi,FD_STDIN   ; file descriptor from which to read
     mov  rsi,r8         ; buffer address for storage
     mov  rdx,r9         ; acceptable buffer length
     syscall     ; execute the system call
@@ -308,8 +303,6 @@ ATOI:
     call ATOI_SEEK      ; all the seeking algorithm
     pop  rax            ; restore the address of string representation
     ret
-; end ATOI
-
 
 ; ATOI_SEEK(int *rdi, int rsi, int rdx, char **rax)
 ; Seeking implementation of ATOI.
@@ -538,10 +531,26 @@ STRREV_POP_END:
 ; This segment stores the data to be used in the program.
 section .data
 
+; System Call Constants:
+;   system calls
+sys_read:       equ 0
+sys_write:      equ 1
+sys_exit:       equ 2
+;   file descriptor for STDIN
+FD_STDIN:       equ 0
+;   file descriptor for STDOUT
+FD_STDOUT:      equ 1
+;   exit with no errors
+EXIT_SUCCESS:   equ 0
+;   hangup signal (end of input)
+SIGHUP:         equ 1
+
 ; Constants:
 ;   newline character
 ENDL:           db 0ah
-;   each integer is a quad word = 8 bytes
+;   each integer is a quad word = 8 bytes.
+;   This is used because each address in x86-64 is
+;   64-bits = 8 bytes = 1 quad word.
 QWORD_SIZE:     equ 8
 ;   character length of a decimal integer (20 digits + sign)
 INT_LEN:        equ 21
@@ -584,7 +593,7 @@ OP_LBLS:        dq OP_LBL_0, OP_LBL_1, OP_LBL_2
 ;   array of output label lengths
 OP_LBL_LENS:    dq OP_LBL_0_LEN, OP_LBL_1_LEN, OP_LBL_2_LEN
 ;   #calculator outputs
-N_OP_LBLS:      equ (($ - OP_LBL_LENS)/QWORD_SIZE)
+N_OPS:          equ (($ - OP_LBL_LENS)/QWORD_SIZE)
 ;   ending label of calculator outputs
 OP_END_LBL:     db "."
 ;   length of calculator output ending label
