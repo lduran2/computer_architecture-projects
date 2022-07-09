@@ -1,8 +1,14 @@
+v5.2.0 - 2022-07-09t19:02
+    main now accepts 2 inputs
+    abstracted PROMPT_INT_INPUT
+    renamed LOOP_ENDs for clarity
+
 v5.1.0 - 2022-07-08t00:49
     constants for system calls and related
 
 v5.0.0 - 2022-07-07t18:43
     cleaned out unit test code
+    moved CHANGELOG out of x86-calc.asm
 
 v4.4.2 - 2022-07-01t02:11Q
     optimized PROMPT_AND_GET_INPUT_LOOP

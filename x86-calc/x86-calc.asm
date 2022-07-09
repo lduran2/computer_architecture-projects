@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Canonical : https://github.com/lduran2/computer_architecture-projects/x86-calc/x86-calc.asm
+; Canonical : https://github.com/lduran2/computer_architecture-projects/blob/master/x86-calc/x86-calc.asm
 ; Addition calculator program.
 ;
 
@@ -11,18 +11,16 @@ section .text
 
 ; Beginning calculator program.
 _start:
-    mov  rsi,IP_CBUF            ; initialize running address of input buffer
-MAIN_LOOP:
-    ; C equivalent: PROMPT_AND_GET_INPUT(&rdx, &rax);
-    call PROMPT_AND_GET_INPUT   ; get user input for calculator
-    test rcx,-1                 ; check count as error code
-    jne  END                    ; if error, then end
+    ; initialize buffer state
+    mov  rsi,IP_CBUF            ; running address to starting address
+    mov  rcx,IP_CBUF.LEN        ; remaining length to maximum acceptable
+    ; C equivalent: PROMPT_AND_GET_OPERANDS(&rsi, &rcx, &rdx, &rax);
+    call PROMPT_AND_GET_OPERANDS    ; get user input for calculator
     ; perform the arithmetic operation
     mov  rcx,rax                ; backup operand 0 for printing
     add  rax,rdx                ; perform addition
     ; C equivalent: TO_STRING_AND_PRINT(rcx, rdx, rax);
     call TO_STRING_AND_PRINT    ; output the results
-    jmp  MAIN_LOOP              ; repeat until no more input
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -33,86 +31,74 @@ END:
 ; end _start
 
 
-; PROMPT_AND_GET_INPUT(char **rsi, int *rcx, int *rdx, int *rax)
+; Handles when the end of the input is reached.
+EXIT_END_OF_INPUT:
+    ; C equivalent: write(FD_STDERR, END_OF_INPUT, END_OF_INPUT.LEN);
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
+    mov  rsi,END_OF_INPUT           ; move end label to print
+    mov  rdx,END_OF_INPUT.LEN       ; length of end label
+    syscall     ; execute the system call
+    ; C equivalent: exit(-SIGHUP);
+    ; exit without error
+    mov  rax,sys_exit       ; system call to perform
+    mov  rdi,-SIGHUP        ; exit with hang up signal
+    syscall     ; execute the system call
+; end EXIT_END_OF_INPUT
+
+
+; PROMPT_AND_GET_OPERANDS(char **rsi, int *rcx, int *rdx, int *rax)
 ; Asks for and accepts the input for the calculator.
 ; @param
 ;   rsi : char **= running address in input buffer
 ; @param
-;   rcx : int *= error code:
-;                   0 if both operands read;
-;                   otherwise, (2 - (#operands read))
+;   rcx : int *= remaining length of the buffer
 ; @param
 ;   rdx : int *= address to store operand 1
 ; @param
 ;   rax : int *= address to store operand 0
-PROMPT_AND_GET_INPUT:
-    push r8                     ; backup for prompt array address
-    push r9                     ; backup for prompt length array address
-    push r10                    ; backup for address of input buffer
-    push r11                    ; backup for address of input integers
-    push rdi                    ; backup destination index for various uses
-    ; initializations
-    mov  r8,PROMPTS             ; initialize the prompt array address
-    mov  r9,PROMPT_LENS         ; initialize the prompt length array address
-    mov  r10,rsi                ; initialize running address of input buffer
-    mov  rcx,N_PROMPTS          ; number of prompts
-; print each prompt
-PROMPT_AND_GET_INPUT_LOOP:
-    ; C equivalent:
-    ; PROMPT_INPUT(&rdi, PROMPTS[N_PROMPTS - rcx], IP_CBUF_LEN,
-    ;   PROMPT_LENS[N_PROMPTS - rcx]);
-    push rcx            ; guard from write changing rcx
-    mov  rdi,r10                ; buffer address for storage
-    mov  rdx,IP_CBUF_LEN        ; acceptable buffer length
-    mov  rsi,[r8]               ; prompt to print
-    mov  rcx,[r9]               ; #characters to print
-    call PROMPT_INPUT           ; print the prompt
+PROMPT_AND_GET_OPERANDS:
+    push r8                     ; backup general purpose for temp operand 0
+    push r9                     ; backup general purpose for temp operand 1
+    push rdi                    ; backup destination index for address buffer
+    ; initialize buffer state
+    mov  rdi,rsi                ; running address
+    mov  rdx,rcx                ; remaining length
+    ; accept operand 0
+    ; PROMPT_INT_INPUT(&rdi, PROMPT_0, rcx, PROMPT_0.LEN, &rax);
+    mov  rsi,PROMPT_0           ; prompt to print
+    mov  rcx,PROMPT_0.LEN       ; #characters in prompt
+    call PROMPT_INT_INPUT       ; print the prompt and accept user input
+    mov  r8,rax                 ; temporarily store operand 0
+    ; print blank line
+    ; C equivalent: WRITELN(rdi, 0);
+    push rdx                    ; backup running length for 0 characters
+    mov  rdx,0                  ; 0 characters to print
+    call WRITELN                ; print blank line
+    pop  rdx                    ; restore running length
+    ; accept operand 1
+    ; PROMPT_INT_INPUT(&rdi, PROMPT_1, IP_CBUF.LEN, PROMPT_1.LEN, &rax);
+    mov  rsi,PROMPT_1           ; prompt to print
+    mov  rcx,PROMPT_1.LEN       ; #characters in prompt
+    call PROMPT_INT_INPUT       ; print the prompt and accept user input
+    mov  r9,rax                 ; temporarily store operand 1
+    ; store buffer state
+    mov  rsi,rdi                ; running address
+    mov  rcx,rdx                ; remaining length
+    ; wait to store operand 1 because rdx will be used for 0 characters
+    ; print blank line
     ; C equivalent: WRITELN(rdi, 0);
     mov  rdx,0                  ; 0 characters to print
     call WRITELN                ; print blank line
-    pop  rcx            ; restore rcx
-    ; C equivalent: SEEKNE(&rdi, &ISSPACE);
-    mov  rax,ISSPACE            ; use ISSPACE for seeking
-    call SEEKNE                 ; find first non-space character
-    ; check if the current character is null
-PROMPT_AND_GET_INPUT_NULL_CHECK:
-    mov  rsi,[rdi]          ; get the current character
-    test rsi,7fh            ; check if null character
-    jne  PROMPT_AND_GET_INPUT_NULL_CHECK_END ; if not, continue past null check
-    mov  rsi,rcx                ; backup count
-    ; push dummy values in case input ran out
-CALC_PUSH_DUMMY_LOOP:
-    push rcx                    ; push some value (I chose count to debug)
-    loop CALC_PUSH_DUMMY_LOOP   ; loop until count resets
-    mov  rcx,rsi                ; restore count
-CALC_PUSH_DUMMY_END:
-    jmp   PROMPT_AND_GET_INPUT_END    ; break out of loop
-PROMPT_AND_GET_INPUT_NULL_CHECK_END:
-    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
-    mov  rsi,IP_RADIX           ; set radix
-    mov  rax,rdi                ; parse from IP_CBUF
-    call ATOI_SEEK              ; convert to integer,
-                                ;   changing address in buffer
-    ; store results
-    mov  r10,rax                ; update running address
-    push rdi                    ; store the new integer on stack
-    ; iterate
-    add  r8,QWORD_SIZE          ; next prompt
-    add  r9,QWORD_SIZE          ; next length
-    loop PROMPT_AND_GET_INPUT_LOOP        ; repeat
-PROMPT_AND_GET_INPUT_END:
-    ; store the input
-    mov  rsi,r10                ; store running address
-    pop  rdx                    ; pop operand 1 off stack
-    pop  rax                    ; pop operand 0 off stack
+    ; permanently each store operand
+    mov  rax,r8                 ; operand 0
+    mov  rdx,r9                 ; operand 1
     ; cleanup
     pop  rdi                    ; restore destination index
-    pop  r11                    ; restore general purpose
-    pop  r10                    ; restore general purpose
     pop  r9                     ; restore general purpose
     pop  r8                     ; restore general purpose
     ret
-; end PROMPT_AND_GET_INPUT
+; end PROMPT_AND_GET_OPERANDS
 
 
 ; TO_STRING_AND_PRINT(int rcx, int rdx, int rax)
@@ -169,21 +155,62 @@ TO_STRING_AND_PRINT_LOOP:
     add  r8,QWORD_SIZE          ; next label
     add  r9,QWORD_SIZE          ; next length
     loop TO_STRING_AND_PRINT_LOOP       ; loop until no next output
-TO_STRING_AND_PRINT_END:
+TO_STRING_AND_PRINT_LOOP_END:
     ; end the printed statement
-    ; C equivalent: WRITELN(OP_END_LBL, OP_END_LBL_LEN);
+    ; C equivalent: WRITELN(OP_END_LBL, OP_END_LBL.LEN);
     mov  rsi,OP_END_LBL        ; move end label to print
-    mov  rdx,OP_END_LBL_LEN    ; length of end label
+    mov  rdx,OP_END_LBL.LEN    ; length of end label
     call WRITELN                    ; print end label
-    ; newline
-    mov  rdx,0          ; 0 characters
-    call WRITELN
+    ; cleanup
     pop  rsi                    ; restore source index
     pop  rdi                    ; restore destination index
     pop  r9                     ; restore general purpose
     pop  r8                     ; restore general purpose
     ret
 ; end TO_STRING_AND_PRINT
+
+
+; PROMPT_INT_INPUT(int **rdi, char *rsi, int rdx, int rcx, int *rax)
+; Displays a prompt, then accepts integer for input.
+; The new value of rdi will be the new 
+; @param
+;   rdi : out int ** = address to buffer accepting integer input
+; @param
+;   rsi : in  char * = address to prompt to print
+; @param
+;   rdx : int = maximum length of input
+; @param
+;   rcx : int = exact length of output
+; @param
+;   rax : out int * = the integer read from standard input
+PROMPT_INT_INPUT:
+    push rsi            ; backup prompt to be replaced by current character
+    ; print the prompt and get the input as a string
+    ; C equivalent:
+    ; PROMPT_INPUT(rdi, rsi, rdx, rcx);
+    call PROMPT_INPUT           ; print the prompt
+    ; seek for next none-space character
+    ; C equivalent: SEEKNE(&rdi, &ISSPACE);
+    mov  rax,ISSPACE            ; use ISSPACE for seeking
+    call SEEKNE                 ; find first non-space character
+    ; check if the current character is null
+    mov  rsi,[rdi]          ; get the current character
+    test rsi,7fh            ; check if null character
+    jz   EXIT_END_OF_INPUT  ; if null, exit from end of input
+    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
+    mov  rsi,IP_RADIX           ; set radix
+    mov  rax,rdi                ; parse from rdi
+    call ATOI_SEEK              ; convert to integer,
+                                ;   changing address in buffer
+    ; At this point: running address is in rax; integer is in rdi.
+    ; So we use XOR to swap them.
+    xor  rdi,rax
+    xor  rax,rdi                ; rax now correct
+    xor  rdi,rax                ; rdi now correct
+    ; clean up
+    pop  rsi            ; restore prompt
+    ret
+; end PROMPT_INT_INPUT
 
 
 ; WRITELN(char *rdi, int rdx)
@@ -278,10 +305,10 @@ SEEKNE_LOOP:
     mov  rsi,[rdi]          ; get the next character
     and  rsi,7fh            ; ignore all non-ASCII bits
     call rax                ; check if a space
-    jne  SEEKNE_END         ; if not, then use as a digit
+    jne  SEEKNE_LOOP_END    ; if not, then use as a digit
     inc  rdi                ; otherwise, move to the next character
     jmp  SEEKNE_LOOP        ; repeat until not ZF
-SEEKNE_END:
+SEEKNE_LOOP_END:
     pop  rsi            ; restore rsi
     ret
 ; end SEEKNE
@@ -299,15 +326,18 @@ SEEKNE_END:
 ; @param
 ;   rax : in  char * = string representation of the integer to parse
 ATOI:
+    push rdx            ; backup the string length
     push rax            ; backup address of string representation
     call ATOI_SEEK      ; all the seeking algorithm
     pop  rax            ; restore the address of string representation
+    pop  rdx            ; restore the string length
     ret
 
-; ATOI_SEEK(int *rdi, int rsi, int rdx, char **rax)
+; ATOI_SEEK(int *rdi, int rsi, int *rdx, char **rax)
 ; Seeking implementation of ATOI.
 ; After this runs, *rax will be the address of the next whitespace or
-; null character.
+; null character, and *rdx will represent the remaining length of the
+; string.
 ; @see #ATOI
 ATOI_SEEK:
     push rcx            ; backup counter
@@ -329,10 +359,10 @@ ATOI_SIGN_CHAR:
 ATOI_STR_LOOP:
     mov  rsi,[rax]          ; copy the character
     test rsi,7fh            ; check if null character
-    je   ATOI_STR_END       ; break if all 0 ASCII bits
+    je   ATOI_STR_LOOP_END  ; break if all 0 ASCII bits
     and  rsi,7fh            ; ignore all non-ASCII bits
     call ISSPACE            ; if (space character),
-    je   ATOI_STR_END       ; then finish the loop
+    je   ATOI_STR_LOOP_END  ; then finish the loop
     ; otherwise
     test rsi,'@'            ; can the character be a single numeric digit?
     je   ATOI_NUMERIC       ; if so, go to numeric
@@ -348,7 +378,7 @@ ATOI_ACC_DIGIT:
     add  rdi,rsi                ; add the digit to the sum so far
     inc  rax                ; next character in source
     loop ATOI_STR_LOOP      ; repeat
-ATOI_STR_END:
+ATOI_STR_LOOP_END:
 ; set the sign of the number
 ATOI_INT_SIGN:
     test r8,-1              ; check (negative integer flag)
@@ -356,6 +386,7 @@ ATOI_INT_SIGN:
     neg  rdi                ; otherwise, negate the integer
 ATOI_CLEANUP:
     mov  rsi,r9         ; restore radix
+    mov  rdx,rcx        ; update the remaining length
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
@@ -450,11 +481,11 @@ ITOA_STORE_DIGIT:
     push rdx                    ; store the digit
     inc  r8                     ; count digits so far
     test rax,-1                 ; if (!quotient)
-    je   ITOA_DIVIDE_INT_END    ; then break
+    je   ITOA_DIVIDE_INT_LOOP_END   ; then break
     ; C equivalent: SIGN128(&rdx, rax);
     call SIGN128                ; extend sign bit
     jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
-ITOA_DIVIDE_INT_END:
+ITOA_DIVIDE_INT_LOOP_END:
     test r10,-1             ; test sign bit
     je   ITOA_CLEANUP       ; if not set, skip adding '-'
     inc  r8                 ; extra character for '-'
@@ -507,7 +538,7 @@ STRREV_PUSH_LOOP:
     push r9                 ; push it onto stack
     inc  r8                 ; next character in source
     loop STRREV_PUSH_LOOP   ; repeat
-STRREV_PUSH_END:
+STRREV_PUSH_LOOP_END:
 ; initialize for popping each character
 STRREV_POP_INIT:
     mov  rcx,rdx        ; set counter to rdx
@@ -518,7 +549,7 @@ STRREV_POP_LOOP:
     mov  [r10],r9           ; place the character in the sink
     inc  r10                ; next character in sink
     loop STRREV_POP_LOOP    ; repeat
-STRREV_POP_END:
+STRREV_POP_LOOP_END:
     pop  r10            ; restore general purpose
     pop  r9             ; restore general purpose
     pop  r8             ; restore general purpose
@@ -535,11 +566,13 @@ section .data
 ;   system calls
 sys_read:       equ 0
 sys_write:      equ 1
-sys_exit:       equ 2
+sys_exit:       equ 60
 ;   file descriptor for STDIN
 FD_STDIN:       equ 0
 ;   file descriptor for STDOUT
 FD_STDOUT:      equ 1
+;   file descriptor for STDERR
+FD_STDERR:      equ 2
 ;   exit with no errors
 EXIT_SUCCESS:   equ 0
 ;   hangup signal (end of input)
@@ -559,19 +592,23 @@ IP_RADIX:       equ 10
 ; radix for output (defaults to decimal numbers)
 OP_RADIX:       equ 10
 
+; Error strings:
+END_OF_INPUT:   db 0ah, "End of input was reached while parsing.", 0ah
+END_OF_INPUT.LEN:   equ ($ - END_OF_INPUT)
+
 ; Calculator input:
 ;   prompt for user input for operand 1
 PROMPT_0:       db "Please enter the augend.", 0ah, "> "
 ;   length of operand 1 prompt
-PROMPT_0_LEN:   equ ($ - PROMPT_0)
+PROMPT_0.LEN:   equ ($ - PROMPT_0)
 ;   prompt for user input for operand 2
 PROMPT_1:       db "Please enter the addend.", 0ah, "> "
 ;   length of operand 2 prompt
-PROMPT_1_LEN:   equ ($ - PROMPT_1)
+PROMPT_1.LEN:   equ ($ - PROMPT_1)
 ;   array of calculator prompts
 PROMPTS:        dq PROMPT_0, PROMPT_1
 ;   array of calculator prompt lengths
-PROMPT_LENS:    dq PROMPT_0_LEN, PROMPT_1_LEN
+PROMPT_LENS:    dq PROMPT_0.LEN, PROMPT_1.LEN
 ;   #calculator prompts
 N_PROMPTS:      equ (($ - PROMPT_LENS)/QWORD_SIZE)
 
@@ -579,38 +616,38 @@ N_PROMPTS:      equ (($ - PROMPT_LENS)/QWORD_SIZE)
 ;   label for operand 0
 OP_LBL_0:       db ""
 ;   length of label for operand 0
-OP_LBL_0_LEN:   equ ($ - OP_LBL_0)
+OP_LBL_0.LEN:   equ ($ - OP_LBL_0)
 ;   label for operand 1
 OP_LBL_1:       db " + "
 ;   length of label for operand 1
-OP_LBL_1_LEN:   equ ($ - OP_LBL_1)
+OP_LBL_1.LEN:   equ ($ - OP_LBL_1)
 ;   label for result
 OP_LBL_2:       db " = "
 ;   length of label for result
-OP_LBL_2_LEN:   equ ($ - OP_LBL_2)
+OP_LBL_2.LEN:   equ ($ - OP_LBL_2)
 ;   array of output labels
 OP_LBLS:        dq OP_LBL_0, OP_LBL_1, OP_LBL_2
 ;   array of output label lengths
-OP_LBL_LENS:    dq OP_LBL_0_LEN, OP_LBL_1_LEN, OP_LBL_2_LEN
+OP_LBL_LENS:    dq OP_LBL_0.LEN, OP_LBL_1.LEN, OP_LBL_2.LEN
 ;   #calculator outputs
 N_OPS:          equ (($ - OP_LBL_LENS)/QWORD_SIZE)
 ;   ending label of calculator outputs
 OP_END_LBL:     db "."
 ;   length of calculator output ending label
-OP_END_LBL_LEN:    equ ($ - OP_END_LBL)
+OP_END_LBL.LEN:    equ ($ - OP_END_LBL)
 
 ; related to general user I/O
 ;   number of operations to allow
 N_OPERATIONS:   equ 1
 ;   length of input buffer (2 space-separated integers/operation)
-IP_CBUF_LEN:    equ (N_OPERATIONS * (2 * (INT_LEN + 1)))
+IP_CBUF.LEN:    equ (N_OPERATIONS * (2 * (INT_LEN + 1)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
 section .bss
 ; character buffer for input
-IP_CBUF:        resb IP_CBUF_LEN
+IP_CBUF:        resb IP_CBUF.LEN
 ; allocate space for string representations of integers
 INT_STR_REP:    resb INT_LEN
 
