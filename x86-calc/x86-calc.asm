@@ -31,22 +31,6 @@ END:
 ; end _start
 
 
-; Handles when the end of the input is reached.
-EXIT_END_OF_INPUT:
-    ; C equivalent: write(FD_STDERR, END_OF_INPUT, END_OF_INPUT.LEN);
-    mov  rax,sys_write  ; system call to perform
-    mov  rdi,FD_STDOUT  ; file descriptor to which to write
-    mov  rsi,END_OF_INPUT           ; move end label to print
-    mov  rdx,END_OF_INPUT.LEN       ; length of end label
-    syscall     ; execute the system call
-    ; C equivalent: exit(-SIGHUP);
-    ; exit without error
-    mov  rax,sys_exit       ; system call to perform
-    mov  rdi,-SIGHUP        ; exit with hang up signal
-    syscall     ; execute the system call
-; end EXIT_END_OF_INPUT
-
-
 ; PROMPT_AND_GET_OPERANDS(char **rsi, int *rcx, int *rdx, int *rax)
 ; Asks for and accepts the input for the calculator.
 ; @param
@@ -558,6 +542,24 @@ STRREV_POP_LOOP_END:
 ; end STRREV
 
 
+; Handles when the end of the input is reached.
+EXIT_END_OF_INPUT:
+    ; C equivalent: write(FD_STDOUT, END_OF_INPUT, END_OF_INPUT.LEN);
+    ; Note: We use STDOUT here, instead of STDERR because the
+    ;   compiler may be inconsistent.
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
+    mov  rsi,END_OF_INPUT           ; move end label to print
+    mov  rdx,END_OF_INPUT.LEN       ; length of end label
+    syscall     ; execute the system call
+    ; C equivalent: exit(-SIGHUP);
+    ; exit without error
+    mov  rax,sys_exit       ; system call to perform
+    mov  rdi,-SIGHUP        ; exit with hang up signal
+    syscall     ; execute the system call
+; end EXIT_END_OF_INPUT
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment stores the data to be used in the program.
 section .data
@@ -572,6 +574,8 @@ FD_STDIN:       equ 0
 ;   file descriptor for STDOUT
 FD_STDOUT:      equ 1
 ;   file descriptor for STDERR
+;   Although the compiler may be inconsistent, so we will stick
+;       to STDOUT.
 FD_STDERR:      equ 2
 ;   exit with no errors
 EXIT_SUCCESS:   equ 0

@@ -1,3 +1,6 @@
+v5.2.1 - 2022-07-09t22:38
+    all functions as classes in UML-like diagram
+
 v5.2.0 - 2022-07-09t19:02
     main now accepts 2 inputs
     abstracted PROMPT_INT_INPUT
