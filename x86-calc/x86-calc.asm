@@ -123,10 +123,9 @@ TO_STRING_AND_PRINT_LOOP:
     ; C equivalent: SIGN128(&rdx, rax);
     ; rax already set
     call SIGN128                ; extend the sign bit
-    ; C equivalent: ITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    ; C equivalent: DITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
     mov  rdi,INT_STR_REP        ; set the result address
-    mov  rsi,OP_RADIX           ; set radix
-    call ITOA                   ; convert to a string
+    call DITOA                  ; convert to a string
     ; C equivalent: write(FD_STDOUT, rdi, rdx);
     push rcx            ; guard from write changing rcx
     mov  rsi,rdi        ; print the string representation
@@ -409,78 +408,70 @@ ISSPACE_CHECKED:
 ; end ISSPACE
 
 
-; ITOA(char *rdi, int rsi, int *rdx, int rax)
-; Integer TO Ascii
+; DITOA(char *rdi, int *rdx, int rax)
+; Decimal Integer TO Ascii
 ; converts an integer into an ASCII string representation.
+; This implementation is optimized for decimal integers.
 ; @param
 ;   rdi : out char * = string converted from integer
-; @param
-;   rsi : int = radix of the integer
 ; @param
 ;   rdx :
 ;       in  int * = upper quad word of integer to convert
 ;       out int * = length of string converted from integer
 ; @param
 ;   rax : int = lower quad word of integer to convert
-ITOA:
-    ; safeguard the radix
-    push rsi            ; backup radix (replaced in ITOA_PUSH)
-    call ITOA_IMPL      ; call the implementation
-    pop  rsi            ; restore radix
+DITOA:
+    push rsi            ; backup source index for reverse source
+    call DITOA_IMPL     ; call the implementation
+    pop  rsi            ; restore source index
     ret
 ; push the digits of the integer onto stack
 ; The digits will be backwards.
 ; Then inline STRREV_POP_INIT.
-ITOA_IMPL:
+DITOA_IMPL:
     push rcx            ; for STRREV: backup counter
     push r8             ; backup general purpose r8 for digit count
-    push r9             ; for STRREV: backup general purpose r9
-                        ; for character
+    push r9             ; backup general purpose r9 for radix and
+                        ; for character in STRREV
     push r10            ; backup general purpose r10 for sign register
     mov  r8,0           ; clear digit count
+    mov  r9,10          ; set up radix for division
     mov  r10,rdx            ; copy high quad word into sign flag
+    ; handle sign
     test r10,-1             ; test sign bit
-    je   ITOA_NOW_POSITIVE  ; if not set, then already positive
+    je   DITOA_NOW_POSITIVE ; if not set, then already positive
     ; otherwise
     not  rax                ; flip low  quad word (1s' complement)
     not  rdx                ; flip high quad word (1s' complement)
     add  rax,1              ; increment for 2s' complement
     adc  rdx,0              ; carry     for 2s' complement
 ; upon reaching this label, (rdx:rax) is positive, with sign in r10
-ITOA_NOW_POSITIVE:
-; loop while dividing (rdx:rax) by radix (rsi)
+DITOA_NOW_POSITIVE:
+; loop while dividing (rdx:rax) by radix (10)
 ; and pushing each digit onto the stack
-ITOA_DIVIDE_INT_LOOP:
-    ; (rax, rdx) = divmod((rdx:rax), rsi);
-    idiv rsi                    ; divide (rdx:rax) by radix
-    cmp  rdx,9                  ; can modulo be a single numeric digit?
-    jle  ITOA_NUMERIC           ; if so, go to numeric
-ITOA_ALPHA:
-    sub  rdx,9                  ; how many digits after 9?
-    or   rdx,'@'                ; set modulo to alpha digit
-    jmp  ITOA_STORE_DIGIT       ; skip numeric
-ITOA_NUMERIC:
+DITOA_DIVIDE_INT_LOOP:
+    ; (rax, rdx) = divmod((rdx:rax), 10);
+    idiv r9                     ; divide (rdx:rax) by radix
     or   rdx,'0'                ; convert modulo to numeric digit
-ITOA_STORE_DIGIT:
     push rdx                    ; store the digit
     inc  r8                     ; count digits so far
     test rax,-1                 ; if (!quotient)
-    je   ITOA_DIVIDE_INT_LOOP_END   ; then break
+    je   DITOA_DIVIDE_INT_LOOP_END  ; then break
     ; C equivalent: SIGN128(&rdx, rax);
     call SIGN128                ; extend sign bit
-    jmp  ITOA_DIVIDE_INT_LOOP   ; repeat
-ITOA_DIVIDE_INT_LOOP_END:
+    jmp  DITOA_DIVIDE_INT_LOOP  ; repeat
+DITOA_DIVIDE_INT_LOOP_END:
     test r10,-1             ; test sign bit
-    je   ITOA_CLEANUP       ; if not set, skip adding '-'
+    je   DITOA_CLEANUP      ; if not set, skip adding '-'
     inc  r8                 ; extra character for '-'
     mov  rdx,'-'            ; set the '-'
     push rdx                ; append '-'
 ; reverse the string of digits
-ITOA_CLEANUP:
+DITOA_CLEANUP:
     mov  rsi,rdi        ; use the string so far as the source
     mov  rdx,r8         ; store string length
     jmp  STRREV_POP_INIT    ; pop digits off the stack onto rdi
-; end ITOA
+; end DITOA
 
 
 ; SIGN128(int *rdx, int rax)
@@ -593,8 +584,6 @@ QWORD_SIZE:     equ 8
 INT_LEN:        equ 21
 ; radix for  input (defaults to decimal numbers)
 IP_RADIX:       equ 10
-; radix for output (defaults to decimal numbers)
-OP_RADIX:       equ 10
 
 ; Error strings:
 END_OF_INPUT:   db 0ah, "End of input was reached while parsing.", 0ah

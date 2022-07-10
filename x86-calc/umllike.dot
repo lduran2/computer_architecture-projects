@@ -57,12 +57,12 @@ digraph x86calc {
         label = "{\N|+ rsi : char\l}"
     ];
 
-    ITOA [
-        label = "{\N|+ rdi : char *\l+ rsi : int\l+ rdx : int *\l+ rax : int\l}"
+    DITOA [
+        label = "{\N|+ rdi : char *\l+ rdx : int *\l+ rax : int\l}"
     ];
  
-    ITOA_IMPL [
-        label = "{\N|+ rdi : char *\l+ rsi : int\l+ rdx : int *\l+ rax : int\l}"
+    DITOA_IMPL [
+        label = "{\N|+ rdi : char *\l+ rdx : int *\l+ rax : int\l}"
     ];
 
     SIGN128 [
@@ -111,7 +111,7 @@ digraph x86calc {
     TO_STRING_AND_PRINT -> SIGN128 [
         style="dashed", arrowhead="vee"
     ];
-    TO_STRING_AND_PRINT -> ITOA [
+    TO_STRING_AND_PRINT -> DITOA [
         style="dashed", arrowhead="vee"
     ];
     TO_STRING_AND_PRINT -> WRITELN [
@@ -154,14 +154,14 @@ digraph x86calc {
         style="dashed", arrowhead="vee"
     ];
 
-    ITOA -> ITOA_IMPL [
+    DITOA -> DITOA_IMPL [
         style="dashed", arrowhead="vee"
     ];
 
-    ITOA_IMPL -> SIGN128 [
+    DITOA_IMPL -> SIGN128 [
         style="dashed", arrowhead="vee"
     ];
-    ITOA_IMPL -> STRREV_POP_INIT [
+    DITOA_IMPL -> STRREV_POP_INIT [
         dir="back", arrowtail="odiamond"
     ];
 
