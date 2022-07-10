@@ -41,16 +41,16 @@ digraph x86calc {
         label = "{\N|+ rdi : char **\l+ rax : void (*)(char rsi)\l}"
     ];
 
-    rax [
-        label = "{\N|+ rsi : char\l}"
+    SEEKNE_rax [
+        label = "{SEEKNE::rax|+ rsi : char\l}"
     ];
 
-    ATOI [
-        label = "{\N|+ rdi : int *\l+ rsi : int\l+ rdx : int\l+ rax : char *\l}"
+    ATODI [
+        label = "{\N|+ rdi : int *\l+ rdx : int\l+ rax : char *\l}"
     ];
 
-    ATOI_SEEK [
-        label = "{\N|+ rdi : int *\l+ rsi : int\l+ rdx : int *\l+ rax : char **\l}"
+    ATODI_SEEK [
+        label = "{\N|+ rdi : int *\l+ rdx : int *\l+ rax : char **\l}"
     ];
 
     ISSPACE [
@@ -130,7 +130,7 @@ digraph x86calc {
     PROMPT_INT_INPUT -> EXIT_END_OF_INPUT [
         style="dashed", arrowhead="vee"
     ];
-    PROMPT_INT_INPUT -> ATOI_SEEK [
+    PROMPT_INT_INPUT -> ATODI_SEEK [
         style="dashed", arrowhead="vee"
     ];
 
@@ -138,19 +138,19 @@ digraph x86calc {
         style="dashed", arrowhead="vee"
     ];
 
-    SEEKNE -> rax [
+    SEEKNE -> SEEKNE_rax [
         style="dashed", arrowhead="vee"
     ];
 
-    ISSPACE -> rax [
+    ISSPACE -> SEEKNE_rax [
         arrowhead="empty"
     ];
 
-    ATOI -> ATOI_SEEK [
+    ATODI -> ATODI_SEEK [
         style="dashed", arrowhead="vee"
     ];
 
-    ATOI_SEEK -> ISSPACE [
+    ATODI_SEEK -> ISSPACE [
         style="dashed", arrowhead="vee"
     ];
 

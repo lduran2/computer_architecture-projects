@@ -123,7 +123,7 @@ TO_STRING_AND_PRINT_LOOP:
     ; C equivalent: SIGN128(&rdx, rax);
     ; rax already set
     call SIGN128                ; extend the sign bit
-    ; C equivalent: DITOA(INT_STR_REP, OP_RADIX, &rdx, rax);
+    ; C equivalent: DITOA(INT_STR_REP, &rdx, rax);
     mov  rdi,INT_STR_REP        ; set the result address
     call DITOA                  ; convert to a string
     ; C equivalent: write(FD_STDOUT, rdi, rdx);
@@ -180,10 +180,9 @@ PROMPT_INT_INPUT:
     mov  rsi,[rdi]          ; get the current character
     test rsi,7fh            ; check if null character
     jz   EXIT_END_OF_INPUT  ; if null, exit from end of input
-    ; C equivalent: ATOI_SEEK(&rdi, IP_RADIX, INT_LEN, rdi);
-    mov  rsi,IP_RADIX           ; set radix
+    ; C equivalent: ATODI_SEEK(&rdi, INT_LEN, rdi);
     mov  rax,rdi                ; parse from rdi
-    call ATOI_SEEK              ; convert to integer,
+    call ATODI_SEEK             ; convert to integer,
                                 ;   changing address in buffer
     ; At this point: running address is in rax; integer is in rdi.
     ; So we use XOR to swap them.
@@ -297,84 +296,74 @@ SEEKNE_LOOP_END:
 ; end SEEKNE
 
 
-; ATOI(int *rdi, int rsi, int rdx, char *rax)
+; ATODI(int *rdi, int rdx, char *rax)
 ; Ascii TO Integer
 ; parses an integer from its ASCII string representation.
+; This implementation is optimized for decimal integers.
 ; @param
 ;   rdi : out int * = pointer to the integer
-; @param
-;   rsi : int = radix of the integer
 ; @param
 ;   rdx : int = length of string to parse
 ; @param
 ;   rax : in  char * = string representation of the integer to parse
-ATOI:
+ATODI:
     push rdx            ; backup the string length
     push rax            ; backup address of string representation
-    call ATOI_SEEK      ; all the seeking algorithm
+    call ATODI_SEEK     ; all the seeking algorithm
     pop  rax            ; restore the address of string representation
     pop  rdx            ; restore the string length
     ret
 
-; ATOI_SEEK(int *rdi, int rsi, int *rdx, char **rax)
-; Seeking implementation of ATOI.
+; ATODI_SEEK(int *rdi, int *rdx, char **rax)
+; Seeking implementation of ATODI.
 ; After this runs, *rax will be the address of the next whitespace or
 ; null character, and *rdx will represent the remaining length of the
 ; string.
-; @see #ATOI
-ATOI_SEEK:
+; @see #ATODI
+ATODI_SEEK:
     push rcx            ; backup counter
     push r8             ; flags a negative integer
-    push r9             ; backup general purpose r9 for radix
+    push rsi            ; free rsi for use as the current character
+                        ; this makes isspace easier to use
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
     mov  r8,0           ; reset negative flag
-    mov  r9,rsi         ; free rsi for use as the current character
-                        ; this makes isspace easier to use
-ATOI_SIGN_CHAR:
+ATODI_SIGN_CHAR:
     mov  rsi,[rax]          ; copy the character
     and  rsi,7fh            ; ignore all non-ASCII bits
     cmp  rsi,'-'            ; check if minus sign
-    jne  ATOI_STR_LOOP      ; if not, skip to loop
+    jne  ATODI_STR_LOOP     ; if not, skip to loop
     mov  r8,-1              ; otherwise, set negative integer flag
     inc  rax                ; next character
 ; loop through digits until whitespace or null
-ATOI_STR_LOOP:
+ATODI_STR_LOOP:
     mov  rsi,[rax]          ; copy the character
     test rsi,7fh            ; check if null character
-    je   ATOI_STR_LOOP_END  ; break if all 0 ASCII bits
+    jz   ATODI_STR_LOOP_END ; break if all 0 ASCII bits
     and  rsi,7fh            ; ignore all non-ASCII bits
     call ISSPACE            ; if (space character),
-    je   ATOI_STR_LOOP_END  ; then finish the loop
+    jz   ATODI_STR_LOOP_END ; then finish the loop
     ; otherwise
-    test rsi,'@'            ; can the character be a single numeric digit?
-    je   ATOI_NUMERIC       ; if so, go to numeric
-ATOI_ALPHA:
-    and  rsi,~'@'               ; disable '@' bits for integer value
-    add  rsi,9                  ; all alpha characters after '9'
-    jmp  ATOI_ACC_DIGIT         ; skip numeric
-ATOI_NUMERIC:
     and  rsi,~'0'               ; disable '0' bits for integer value
 ; accumulate the next digit
-ATOI_ACC_DIGIT:
-    imul rdi,r9                 ; multiply the sum by the radix
+    imul rdi,10                 ; multiply the sum by the radix
     add  rdi,rsi                ; add the digit to the sum so far
     inc  rax                ; next character in source
-    loop ATOI_STR_LOOP      ; repeat
-ATOI_STR_LOOP_END:
+    loop ATODI_STR_LOOP     ; repeat
+ATODI_STR_LOOP_END:
 ; set the sign of the number
-ATOI_INT_SIGN:
+ATODI_INT_SIGN:
     test r8,-1              ; check (negative integer flag)
-    je   ATOI_CLEANUP       ; if reset, skip to cleanup
+    jz   ATODI_CLEANUP      ; if reset, skip to cleanup
     neg  rdi                ; otherwise, negate the integer
-ATOI_CLEANUP:
+ATODI_CLEANUP:
     mov  rsi,r9         ; restore radix
     mov  rdx,rcx        ; update the remaining length
-    pop  r9             ; restore general purpose
+    pop  rsi            ; restore source index
     pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
     ret
-; end ATOI_SEEK
+; end ATODI_SEEK
 
 
 ; ISSPACE(char rsi)
@@ -439,7 +428,7 @@ DITOA_IMPL:
     mov  r10,rdx            ; copy high quad word into sign flag
     ; handle sign
     test r10,-1             ; test sign bit
-    je   DITOA_NOW_POSITIVE ; if not set, then already positive
+    jz   DITOA_NOW_POSITIVE ; if reset, then already positive
     ; otherwise
     not  rax                ; flip low  quad word (1s' complement)
     not  rdx                ; flip high quad word (1s' complement)
@@ -456,13 +445,13 @@ DITOA_DIVIDE_INT_LOOP:
     push rdx                    ; store the digit
     inc  r8                     ; count digits so far
     test rax,-1                 ; if (!quotient)
-    je   DITOA_DIVIDE_INT_LOOP_END  ; then break
+    jz   DITOA_DIVIDE_INT_LOOP_END  ; then break
     ; C equivalent: SIGN128(&rdx, rax);
     call SIGN128                ; extend sign bit
     jmp  DITOA_DIVIDE_INT_LOOP  ; repeat
 DITOA_DIVIDE_INT_LOOP_END:
     test r10,-1             ; test sign bit
-    je   DITOA_CLEANUP      ; if not set, skip adding '-'
+    jz   DITOA_CLEANUP      ; if reset, skip adding '-'
     inc  r8                 ; extra character for '-'
     mov  rdx,'-'            ; set the '-'
     push rdx                ; append '-'
@@ -582,8 +571,6 @@ ENDL:           db 0ah
 QWORD_SIZE:     equ 8
 ;   character length of a decimal integer (20 digits + sign)
 INT_LEN:        equ 21
-; radix for  input (defaults to decimal numbers)
-IP_RADIX:       equ 10
 
 ; Error strings:
 END_OF_INPUT:   db 0ah, "End of input was reached while parsing.", 0ah
