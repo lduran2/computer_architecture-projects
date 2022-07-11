@@ -4,6 +4,7 @@
  */
 
 digraph x86calc {
+    /* nodes */
     node [
         shape = "record",
         fontname = "Verdana,DejaVu Sans,Bitstream Vera Sans"
@@ -42,7 +43,7 @@ digraph x86calc {
     ];
 
     SEEKNE_rax [
-        label = "{SEEKNE::rax|+ rsi : char\l}"
+        label = "{&laquo;pointer&raquo;\nSEEKNE::rax|+ rsi : char\l}"
     ];
 
     ATODI [
@@ -83,8 +84,9 @@ digraph x86calc {
 
     sys_exit [
         shape = "doublecircle"
-    ]
+    ];
 
+    /* edges */
     _start -> PROMPT_AND_GET_OPERANDS [
         style="dashed", arrowhead="vee"
     ];
@@ -92,7 +94,7 @@ digraph x86calc {
         style="dashed", arrowhead="vee"
     ];
     _start -> END [
-        style="dashed", arrowhead="vee"
+        dir="back", arrowtail="odiamond"
     ];
 
     END -> sys_exit [
@@ -128,7 +130,7 @@ digraph x86calc {
         style="dashed", arrowhead="vee"
     ];
     PROMPT_INT_INPUT -> EXIT_END_OF_INPUT [
-        style="dashed", arrowhead="vee"
+        dir="back", arrowtail="odiamond"
     ];
     PROMPT_INT_INPUT -> ATODI_SEEK [
         style="dashed", arrowhead="vee"

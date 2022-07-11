@@ -1,24 +1,27 @@
-v5.3.0 - 2022-07-10t02:55
+v5.3.1 - 2022-07-10t02:55Q
     optimize ATOI for decimal integers
 
-v5.3.0 - 2022-07-10t02:30
+v5.3.0 - 2022-07-10t02:30Q
     optimize ITOA for decimal integers
 
-v5.2.2 - 2022-07-10t01:51
+v5.2.3 - 2022-07-11t14:36Q
+    aggregation for end/exit, pointer rax
+
+v5.2.2 - 2022-07-10t01:51Q
     all edges between functions in UML-like diagram
 
-v5.2.1 - 2022-07-09t22:38
+v5.2.1 - 2022-07-09t22:38Q
     all functions as classes in UML-like diagram
 
-v5.2.0 - 2022-07-09t19:02
+v5.2.0 - 2022-07-09t19:02Q
     main now accepts 2 inputs
     abstracted PROMPT_INT_INPUT
     renamed LOOP_ENDs for clarity
 
-v5.1.0 - 2022-07-08t00:49
+v5.1.0 - 2022-07-08t00:49Q
     constants for system calls and related
 
-v5.0.0 - 2022-07-07t18:43
+v5.0.0 - 2022-07-07t18:43Q
     cleaned out unit test code
     moved CHANGELOG out of x86-calc.asm
 
