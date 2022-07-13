@@ -3,7 +3,8 @@
 ; Lexical addition calculator program.
 ;
 ; This implementation adds two numbers without first converting to
-; integers.
+; integers.  So it is optimized for addition, and it is easily possible
+; to modify for subtraction.
 ;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -14,6 +15,12 @@ section .text
 
 ; Beginning calculator program.
 _start:
+    ; get the first 
+    ; initialize buffer state
+    mov  rsi,IP_CBUF            ; running address to starting address
+    mov  rcx,IP_CBUF.LEN        ; remaining length to maximum acceptable
+    ; C equivalent: PROMPT_AND_GET_REVERSES(&rsi, &rcx, &rdx, &rax);
+    call PROMPT_AND_GET_REVERSES    ; get user input for calculator
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -22,6 +29,80 @@ END:
     mov  rdi,EXIT_SUCCESS   ; exit with no errors
     syscall     ; execute the system call
 ; end _start
+
+; PROMPT_AND_GET_REVERSES
+; Asks for and accepts the input, and returns it with its length and
+; reverse.
+PROMPT_AND_GET_REVERSES:
+    ; initialize buffer state
+    mov  rdi,rsi                ; running address
+    mov  rdx,rcx                ; remaining length
+    ; accept operand 0
+    ; PROMPT_REV_INPUT(&rdi, PROMPT_0, rcx, PROMPT_0.LEN, &rax);
+    mov  rsi,PROMPT_0           ; prompt to print
+    mov  rcx,PROMPT_0.LEN       ; #characters in prompt
+    call PROMPT_REV_INPUT       ; print the prompt and accept user input
+    ; accept operand 1
+    ; PROMPT_REV_INPUT(&rdi, PROMPT_1, rcx, PROMPT_1.LEN, &rax);
+    mov  rsi,PROMPT_1           ; prompt to print
+    mov  rcx,PROMPT_1.LEN       ; #characters in prompt
+    call PROMPT_REV_INPUT       ; print the prompt and accept user input
+    ret
+; end PROMPT_AND_GET_REVERSES
+
+
+; PROMPT_REV_INPUT(char **rdi, char *rsi, int rdx, int rcx, char *rax)
+; Displays a prompt, then accepts a reverse string for input.
+; The string length will be in byte 0 of rax.
+; @param
+;   rdi : out char ** = address to buffer accepting input
+; @param
+;   rsi : in  char * = address to prompt to print
+; @param
+;   rdx : int = maximum length of input
+; @param
+;   rcx : int = exact length of output
+; @param
+;   rax : char * = address of reverse buffer (Pascal string)
+PROMPT_REV_INPUT:
+    ; print the prompt and get the input as a string
+    ; C equivalent:
+    ; PROMPT_INPUT(rdi, rsi, rdx, rcx);
+    call PROMPT_INPUT           ; print the prompt
+    ; seek for next none-space character
+    ; C equivalent: SEEKNE(&rdi, &ISSPACE);
+    mov  rax,ISSPACE            ; use ISSPACE for seeking
+    call SEEKNE                 ; find first non-space character
+    ; check if the current character is null
+    mov  rsi,[rdi]          ; get the current character
+    test rsi,7fh            ; check if null character
+    jz   EXIT_END_OF_INPUT  ; if null, exit from end of input
+    mov  r8,rdi             ; store the current address
+    mov  r9,0               ; initialize length
+    ; find the length of the input
+PROMPT_REV_INPUT_LEN_LOOP:
+    inc  rdi                            ; next character
+    inc  r9                             ; increment length
+    mov  rsi,[rdi]                      ; copy the character
+    test rsi,7fh                        ; check if null character
+    jz   PROMPT_REV_INPUT_LEN_LOOP_END  ; break if all 0 ASCII bits
+    and  rsi,7fh                        ; ignore all non-ASCII bits
+    call ISSPACE                        ; if (space character),
+    jz   PROMPT_REV_INPUT_LEN_LOOP_END  ; then finish the loop
+    jmp  PROMPT_REV_INPUT_LEN_LOOP      ; repeat
+PROMPT_REV_INPUT_LEN_LOOP_END:
+    ; output the string found
+    push rdi
+    push rdx
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
+    mov  rsi,r8
+    mov  rdx,r9
+    syscall     ; execute the system call
+    pop  rdx
+    pop  rdi
+    ret
+; end PROMPT_REV_INPUT
 
 
 ; WRITELN(char *rdi, int rdx)
@@ -248,8 +329,8 @@ ENDL:           db 0ah
 ;   This is used because each address in x86-64 is
 ;   64-bits = 8 bytes = 1 quad word.
 QWORD_SIZE:     equ 8
-;   character length of a decimal integer (20 digits + sign)
-INT_LEN:        equ 21
+;   maximum length of a Pascal string
+PAS_STR_LEN:    equ 255
 
 ; Error strings:
 END_OF_INPUT:   db 0ah, "End of input was reached while parsing.", 0ah
@@ -264,12 +345,6 @@ PROMPT_0.LEN:   equ ($ - PROMPT_0)
 PROMPT_1:       db "Please enter the addend.", 0ah, "> "
 ;   length of operand 2 prompt
 PROMPT_1.LEN:   equ ($ - PROMPT_1)
-;   array of calculator prompts
-PROMPTS:        dq PROMPT_0, PROMPT_1
-;   array of calculator prompt lengths
-PROMPT_LENS:    dq PROMPT_0.LEN, PROMPT_1.LEN
-;   #calculator prompts
-N_PROMPTS:      equ (($ - PROMPT_LENS)/QWORD_SIZE)
 
 ; Calculator output:
 ;   label for operand 0
@@ -299,7 +374,7 @@ OP_END_LBL.LEN:    equ ($ - OP_END_LBL)
 ;   number of operations to allow
 N_OPERATIONS:   equ 1
 ;   length of input buffer (2 space-separated integers/operation)
-IP_CBUF.LEN:    equ (N_OPERATIONS * (2 * (INT_LEN + 1)))
+IP_CBUF.LEN:    equ (N_OPERATIONS * (2 * (PAS_STR_LEN + 1)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -309,11 +384,11 @@ section .bss
 IP_CBUF:        resb IP_CBUF.LEN
 ; allocate space for string representations of integers
 ; allocate space for each operator
-IP_OPERAND_0:   resb INT_LEN
-IP_OPERAND_1:   resb INT_LEN
-; allocate space for the reverse of the operators (minus the sign)
-OPERAND_0_REV:  resb (INT_LEN - 1)
-OPERAND_1_REV:  resb (INT_LEN - 1)
+P_OPERAND_0:    resq QWORD_SIZE
+P_OPERAND_1:    resq QWORD_SIZE
+; allocate space for the reverse of the operators (plus length)
+OPERAND_0_REV:  resb (1 + PAS_STR_LEN)
+OPERAND_1_REV:  resb (1 + PAS_STR_LEN)
 ; the result of the operation to output
-OP_RESULT:      resb INT_LEN
+OP_RESULT:      resb (1 + PAS_STR_LEN)
 
