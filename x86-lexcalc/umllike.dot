@@ -1,0 +1,93 @@
+/* Note that this is not exactly a UML diagram.
+   Rather, it treats functions as classes
+   with their parameters as public fields.
+ */
+
+digraph x86calc {
+    /* nodes */
+    node [
+        shape = "record",
+        fontname = "Verdana,DejaVu Sans,Bitstream Vera Sans"
+    ];
+
+    _start [
+        label = "{\N|}"
+    ];
+
+    END [
+        label = "{\N|}"
+    ];
+
+
+
+    WRITELN [
+        label = "{\N|+ rdi : char *\l+ rdx : int\l}"
+    ];
+
+    PROMPT_INPUT [
+        label = "{\N|+ rdi : char *\l+ rsi : char *\l+ rdx : int\l+ rcx : int\l}"
+    ];
+
+    SEEKNE [
+        label = "{\N|+ rdi : char **\l+ rax : void (*)(char rsi)\l}"
+    ];
+
+    SEEKNE_rax [
+        label = "{&laquo;pointer&raquo;\nSEEKNE::rax|+ rsi : char\l}"
+    ];
+
+
+
+    ISSPACE [
+        label = "{\N|+ rsi : char\l}"
+    ];
+
+
+
+    STRREV [
+        label = "{\N|+ rdi : char *\l+ rsi : char *\l+ rdx : int\l}"
+    ];
+
+    STRREV_POP_INIT [
+        label = "{\N|+ rdi : char *\l+ rdx : int\l}"
+    ];
+ 
+    EXIT_END_OF_INPUT [
+        label = "{\N|}"
+    ];
+
+    sys_exit [
+        shape = "doublecircle"
+    ];
+
+    /* edges */
+
+    _start -> END [
+        dir="back", arrowtail="odiamond"
+    ];
+
+    END -> sys_exit [
+        style="dashed", arrowhead="vee"
+    ];
+
+
+
+    EXIT_END_OF_INPUT -> sys_exit [
+        style="dashed", arrowhead="vee"
+    ];
+
+    SEEKNE -> SEEKNE_rax [
+        style="dashed", arrowhead="vee"
+    ];
+
+    ISSPACE -> SEEKNE_rax [
+        style="dashed", arrowhead="empty"
+    ];
+
+
+
+    STRREV -> STRREV_POP_INIT [
+        dir="back", arrowtail="odiamond"
+    ];
+
+}

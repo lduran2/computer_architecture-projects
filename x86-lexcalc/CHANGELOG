@@ -1,0 +1,55 @@
+v3.5.1 - 2022-07-12t15:21Q
+    copied all relevent procedures, constants from x86-calc
+
+v3.5.0 - 2022-07-09t19:02Q
+    renamed LOOP_ENDs for clarity
+
+v3.4.0 - 2022-06-29t02:12Q
+    done generalizing, fix allocating buffers
+
+v3.3.2 - 2022-06-24t18:50Q
+    consistent checking for ASCII characters
+
+v3.3.0 - 2022-06-24t18:34Q
+    implemented character seeking
+
+v3.2.1 - 2022-06-23t21:01Q
+    abstracted ATOI_SEEK, PROMPT_INPUT
+
+v2.9.3 - 2022-06-26t19:10Q
+    generalized ITOA_TEST_DST for reuse
+    more thorough documentation for .data and .bss
+
+v2.9.1 - 2022-06-22t13:47Q
+    just use high quad word for sign flag
+
+v2.9.0 - 2022-06-22t02:28Q
+    ITOA pushes digits, inlines STRREV_POP_INIT
+
+v2.1.1 - 2022-06-17t01:59Q
+    documentation: ITOA, STRREV
+
+v1.4.0 - 2022-06-29t01:47Q
+    fixed allocation (times->resb)
+
+v1.3.2 - 2022-06-24t01:20Q
+    fixed syscall, pop, ret in WRITELN
+
+v1.3.1 - 2022-06-24t01:02Q
+    abstracted WRITELN
+
+v1.3.0 - 2022-06-22t00:28Q
+    reverser can now be out of place
+
+v1.1.0 - 2022-06-16t01:57Q
+    added program modes
+
+v1.0.0 - 2022-06-16t01:29Q
+    reversing strings successfully
+
+v0.1.0 - 2022-06-15t22:00Q
+    counters for reverse push, pop loops
+
+v0.0.0 - 2022-06-15t01:29Q
+    "Hello world" implementation
+
