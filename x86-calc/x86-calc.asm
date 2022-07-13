@@ -585,12 +585,6 @@ PROMPT_0.LEN:   equ ($ - PROMPT_0)
 PROMPT_1:       db "Please enter the addend.", 0ah, "> "
 ;   length of operand 2 prompt
 PROMPT_1.LEN:   equ ($ - PROMPT_1)
-;   array of calculator prompts
-PROMPTS:        dq PROMPT_0, PROMPT_1
-;   array of calculator prompt lengths
-PROMPT_LENS:    dq PROMPT_0.LEN, PROMPT_1.LEN
-;   #calculator prompts
-N_PROMPTS:      equ (($ - PROMPT_LENS)/QWORD_SIZE)
 
 ; Calculator output:
 ;   label for operand 0
