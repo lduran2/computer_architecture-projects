@@ -20,15 +20,8 @@ _start:
     mov  rsi,IP_CBUF            ; running address to starting address
     mov  rcx,IP_CBUF.LEN        ; remaining length to maximum acceptable
     ; C equivalent: PROMPT_AND_GET_STRINGS(&rsi, &rcx, &rdx, &rax);
-    call PROMPT_AND_GET_STRINGS    ; get user input for calculator
-
-    push rdx
-    mov  rsi,r8
-    mov  rdx,rax
-    call WRITELN
-    pop  rdx
-    mov  rsi,rdi
-    call WRITELN
+    call PROMPT_AND_GET_STRINGS ; get user input for calculator
+    call PERFORM_CALCULATION
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -91,11 +84,72 @@ PROMPT_AND_GET_STRINGS:
     ; permanently store operand 1
     mov  rdi,r13                ; address
     mov  rdx,r14                ; length
+    ; cleanup
     pop  r14                    ; restore general purpose
     pop  r13                    ; restore general purpose
     pop  r9                     ; restore general purpose
     ret
 ; end PROMPT_AND_GET_STRINGS
+
+
+; PERFORM_CALCULATION
+; Performs the addition calculation.
+PERFORM_CALCULATION:
+    push r8                     ; backup operand 0 address
+    push rax                    ; backup operand 0 length
+    push rdi                    ; backup operand 1 address
+    push rdx                    ; backup operand 1 length
+    push r9                     ; backup general purpose for carry flag
+    push r10                    ; backup general purpose for length
+    push rsi                    ; backup address of result
+    push r13                    ; backup for current result character
+    push r14                    ; backup for current operand 1 character
+    ; if operand 1 is longer than operand 0, swap
+    cmp  rax,rdx                ; compare operands
+    jge  PERFORM_CALCULATION_ADC_LOOP_INIT  ; skip swap
+    ; use xor for swapping
+    xor  rdi,r8
+    xor  r8, rdi    ; address of larger is ordered
+    xor  rdi,r8     ; address of smaller is ordered
+    xor  rdx,rax
+    xor  rax,rdx    ; length of larger is ordered
+    xor  rdx,rax    ; length of smaller is ordered
+PERFORM_CALCULATION_ADC_LOOP_INIT:
+    mov  r9,0       ; no carry
+    mov  r10,0      ; initialize length
+    mov  rcx,rdx    ; count through smaller operand
+PERFORM_CALCULATION_ADC_LOOP:
+    mov  r13,[r8]   ; store current operand 0 character
+    mov  r14,[rdi]  ; store current operand 1 character
+    add  r13,r14    ; add
+    add  r13,r9     ; carry
+    mov  r9,0       ; reset carry
+    sub  r13,'0'    ; subtract extra '0' from operand 1
+    cmp  r13,'9'                                ; if no overflow
+    jle  PERFORM_CALCULATION_ADC_LOOP_NO_CARRY  ; don't carry
+    ; otherwise
+    sub  r13,10     ; borrow 10
+    mov  r9,0       ; set carry
+PERFORM_CALCULATION_ADC_LOOP_NO_CARRY:
+    mov  [rsi],r13  ; output the current result character
+    ; next characters
+    inc  r8         ; in operand 0
+    inc  rdi        ; in operand 1
+    inc  rsi        ; in result
+    loop PERFORM_CALCULATION_ADC_LOOP
+    mov  rcx,r10                ; store result length
+    ; cleanup
+    pop  r14                    ; backup for current operand 1 character
+    pop  r13                    ; backup for current result character
+    pop  rsi                    ; backup address of result
+    pop  r10                    ; backup general purpose for length
+    pop  r9                     ; backup general purpose
+    pop  rdx                    ; backup operand 1 length
+    pop  rdi                    ; backup operand 1 address
+    pop  rax                    ; backup operand 0 length
+    pop  r8                     ; backup operand 0 address
+    ret
+; end PERFORM_CALCULATION
 
 
 ; PROMPT_STR_INPUT(char **rdi, char *rsi, int rdx, int *rcx, char *rax)
