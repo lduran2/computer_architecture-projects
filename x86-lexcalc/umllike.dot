@@ -18,7 +18,13 @@ digraph x86calc {
         label = "{\N|}"
     ];
 
+    PROMPT_STR_INPUT [
+        label = "{\N|+ rdi : char **\l+ rsi : char *\l+ rdx : int\l+ rcx : int *\l+ rax : char *}"
+    ];
 
+    NEXT_TOKEN [
+        label = "{\N|+ rdi : char **\l+ rcx : int *\l+ rax : char *}"
+    ];
 
     WRITELN [
         label = "{\N|+ rdi : char *\l+ rdx : int\l}"
@@ -55,13 +61,14 @@ digraph x86calc {
     EXIT_END_OF_INPUT [
         label = "{\N|}"
     ];
-
     sys_exit [
         shape = "doublecircle"
     ];
 
     /* edges */
-
+    _start -> PROMPT_AND_GET_STRINGS [
+        style="dashed", arrowhead="vee"
+    ];
     _start -> END [
         dir="back", arrowtail="odiamond"
     ];
@@ -70,9 +77,29 @@ digraph x86calc {
         style="dashed", arrowhead="vee"
     ];
 
+    PROMPT_AND_GET_STRINGS -> PROMPT_STR_INPUT [
+        style="dashed", arrowhead="vee",
+        headlabel="2  "
+    ];
 
+    PROMPT_STR_INPUT -> PROMPT_INPUT [
+        style="dashed", arrowhead="vee"
+    ];
+    PROMPT_STR_INPUT -> NEXT_TOKEN [
+        style="dashed", arrowhead="vee"
+    ];
 
     EXIT_END_OF_INPUT -> sys_exit [
+        style="dashed", arrowhead="vee"
+    ];
+
+    NEXT_TOKEN -> ISSPACE [
+        style="dashed", arrowhead="vee"
+    ];
+    NEXT_TOKEN -> EXIT_END_OF_INPUT [
+        dir="back", arrowtail="odiamond"
+    ];
+    NEXT_TOKEN -> SEEKNE [
         style="dashed", arrowhead="vee"
     ];
 
@@ -83,8 +110,6 @@ digraph x86calc {
     ISSPACE -> SEEKNE_rax [
         style="dashed", arrowhead="empty"
     ];
-
-
 
     STRREV -> STRREV_POP_INIT [
         dir="back", arrowtail="odiamond"

@@ -38,22 +38,21 @@ PROMPT_AND_GET_REVERSES:
     mov  rdi,rsi                ; running address
     mov  rdx,rcx                ; remaining length
     ; accept operand 0
-    ; PROMPT_REV_INPUT(&rdi, PROMPT_0, rcx, PROMPT_0.LEN, &rax);
+    ; PROMPT_STR_INPUT(&rdi, PROMPT_0, rcx, PROMPT_0.LEN, &rax);
     mov  rsi,PROMPT_0           ; prompt to print
     mov  rcx,PROMPT_0.LEN       ; #characters in prompt
-    call PROMPT_REV_INPUT       ; print the prompt and accept user input
+    call PROMPT_STR_INPUT       ; print the prompt and accept user input
     ; accept operand 1
-    ; PROMPT_REV_INPUT(&rdi, PROMPT_1, rcx, PROMPT_1.LEN, &rax);
+    ; PROMPT_STR_INPUT(&rdi, PROMPT_1, rcx, PROMPT_1.LEN, &rax);
     mov  rsi,PROMPT_1           ; prompt to print
     mov  rcx,PROMPT_1.LEN       ; #characters in prompt
-    call PROMPT_REV_INPUT       ; print the prompt and accept user input
+    call PROMPT_STR_INPUT       ; print the prompt and accept user input
     ret
 ; end PROMPT_AND_GET_REVERSES
 
 
-; PROMPT_REV_INPUT(char **rdi, char *rsi, int rdx, int rcx, char *rax)
-; Displays a prompt, then accepts a reverse string for input.
-; The string length will be in byte 0 of rax.
+; PROMPT_STR_INPUT(char **rdi, char *rsi, int rdx, int *rcx, char *rax)
+; Displays a prompt, then accepts a string for input.
 ; @param
 ;   rdi : out char ** = address to buffer accepting input
 ; @param
@@ -61,14 +60,42 @@ PROMPT_AND_GET_REVERSES:
 ; @param
 ;   rdx : int = maximum length of input
 ; @param
-;   rcx : int = exact length of output
+;   rcx : in  int * = exact length of prompt
+;       : out int * = exact length of string token found
 ; @param
-;   rax : char * = address of reverse buffer (Pascal string)
-PROMPT_REV_INPUT:
+;   rax : char * = address of the string
+PROMPT_STR_INPUT:
     ; print the prompt and get the input as a string
     ; C equivalent:
     ; PROMPT_INPUT(rdi, rsi, rdx, rcx);
     call PROMPT_INPUT           ; print the prompt
+    ; find the next token in the input
+    ; NEXT_TOKEN(rdi, rcx, rax);
+    call NEXT_TOKEN
+    ; output the string found
+    push rdi
+    push rdx
+    mov  rsi,rax
+    mov  rdx,rcx
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
+    syscall     ; execute the system call
+    pop  rdx
+    pop  rdi
+    ret
+; end PROMPT_STR_INPUT
+
+
+; NEXT_TOKEN(char **rdi, int *rcx, char *rax)
+; Finds the next space-separated token  in the input buffer rdi.
+; @param
+;   rdi : out char ** = address to buffer accepting input
+; @param
+;   rcx : out int * = exact length of string token found
+; @param
+;   rax : char * = address of the string
+NEXT_TOKEN:
+    push rsi                ; backup source index for current character
     ; seek for next none-space character
     ; C equivalent: SEEKNE(&rdi, &ISSPACE);
     mov  rax,ISSPACE            ; use ISSPACE for seeking
@@ -77,32 +104,23 @@ PROMPT_REV_INPUT:
     mov  rsi,[rdi]          ; get the current character
     test rsi,7fh            ; check if null character
     jz   EXIT_END_OF_INPUT  ; if null, exit from end of input
-    mov  r8,rdi             ; store the current address
-    mov  r9,0               ; initialize length
+    mov  rax,rdi            ; store the current address
+    mov  rcx,0              ; initialize length
     ; find the length of the input
-PROMPT_REV_INPUT_LEN_LOOP:
+NEXT_TOKEN_LEN_LOOP:
     inc  rdi                            ; next character
-    inc  r9                             ; increment length
+    inc  rcx                            ; increment length
     mov  rsi,[rdi]                      ; copy the character
     test rsi,7fh                        ; check if null character
-    jz   PROMPT_REV_INPUT_LEN_LOOP_END  ; break if all 0 ASCII bits
+    jz   NEXT_TOKEN__LEN_LOOP_END       ; break if all 0 ASCII bits
     and  rsi,7fh                        ; ignore all non-ASCII bits
     call ISSPACE                        ; if (space character),
-    jz   PROMPT_REV_INPUT_LEN_LOOP_END  ; then finish the loop
-    jmp  PROMPT_REV_INPUT_LEN_LOOP      ; repeat
-PROMPT_REV_INPUT_LEN_LOOP_END:
-    ; output the string found
-    push rdi
-    push rdx
-    mov  rax,sys_write  ; system call to perform
-    mov  rdi,FD_STDOUT  ; file descriptor to which to write
-    mov  rsi,r8
-    mov  rdx,r9
-    syscall     ; execute the system call
-    pop  rdx
-    pop  rdi
+    jz   NEXT_TOKEN__LEN_LOOP_END       ; then finish the loop
+    jmp  NEXT_TOKEN_LEN_LOOP            ; repeat
+NEXT_TOKEN__LEN_LOOP_END:
+    pop  rsi                ; backup source index for current character
     ret
-; end PROMPT_REV_INPUT
+; end NEXT_TOKEN
 
 
 ; WRITELN(char *rdi, int rdx)
