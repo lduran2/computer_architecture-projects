@@ -1,4 +1,7 @@
-v4.1.0 - 2022-07-13t19:47Q
+v4.0.2 - 2022-07-13t19:47Q
+    parameterized PROMPT_AND_GET_STRINGS
+
+v4.0.1 - 2022-07-13t19:47Q
     abstracted NEXT_TOKEN
 
 v4.0.0 - 2022-07-13t18:59Q

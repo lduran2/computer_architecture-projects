@@ -18,8 +18,12 @@ digraph x86calc {
         label = "{\N|}"
     ];
 
+    PROMPT_AND_GET_STRINGS [
+        label = "{\N|+ rsi : char **\l+ rcx : int *\l+ rdi : char **\l+ rdx : int *\l+ r8 : char **\l+ rax : int *\l}"
+    ];
+
     PROMPT_STR_INPUT [
-        label = "{\N|+ rdi : char **\l+ rsi : char *\l+ rdx : int\l+ rcx : int *\l+ rax : char *}"
+        label = "{\N|+ rdi : char **\l+ rsi : char *\l+ rdx : int\l+ rcx : int *\l+ rax : char *\l}"
     ];
 
     NEXT_TOKEN [

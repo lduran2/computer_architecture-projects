@@ -19,8 +19,16 @@ _start:
     ; initialize buffer state
     mov  rsi,IP_CBUF            ; running address to starting address
     mov  rcx,IP_CBUF.LEN        ; remaining length to maximum acceptable
-    ; C equivalent: PROMPT_AND_GET_REVERSES(&rsi, &rcx, &rdx, &rax);
-    call PROMPT_AND_GET_REVERSES    ; get user input for calculator
+    ; C equivalent: PROMPT_AND_GET_STRINGS(&rsi, &rcx, &rdx, &rax);
+    call PROMPT_AND_GET_STRINGS    ; get user input for calculator
+
+    push rdx
+    mov  rsi,r8
+    mov  rdx,rax
+    call WRITELN
+    pop  rdx
+    mov  rsi,rdi
+    call WRITELN
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -30,25 +38,64 @@ END:
     syscall     ; execute the system call
 ; end _start
 
-; PROMPT_AND_GET_REVERSES
+
+; PROMPT_AND_GET_STRINGS(char **rsi, int *rcx, char **rdi, int *rdx, char **r8, int *rax)
 ; Asks for and accepts the input, and returns it with its length and
 ; reverse.
-PROMPT_AND_GET_REVERSES:
+; @param
+;   rsi : char ** = running address in input buffer
+; @param
+;   rcx : int * = remaining length of the buffer
+; @param
+;   rdi : char ** = address to store operand 1
+; @param
+;   rdx : int * = length of operand 1
+; @param
+;   r8  : char ** = address to store operand 0
+; @param
+;   rax : int * = length of operand 0
+PROMPT_AND_GET_STRINGS:
+    push r9                     ; backup for temp operand 0 length
+    push r13                    ; backup for temp operand 1 address
+    push r14                    ; backup for temp operand 1 length
     ; initialize buffer state
     mov  rdi,rsi                ; running address
     mov  rdx,rcx                ; remaining length
     ; accept operand 0
-    ; PROMPT_STR_INPUT(&rdi, PROMPT_0, rcx, PROMPT_0.LEN, &rax);
+    ; PROMPT_STR_INPUT(&rdi, PROMPT_0, &rcx, PROMPT_0.LEN, &rax);
     mov  rsi,PROMPT_0           ; prompt to print
     mov  rcx,PROMPT_0.LEN       ; #characters in prompt
     call PROMPT_STR_INPUT       ; print the prompt and accept user input
+    ; temporarily store operand 0
+    mov  r8,rax                 ; address
+    mov  r9,rcx                 ; length
+    ; print blank line
+    ; C equivalent: WRITELN(rdi, 0);
+    mov  rdx,0                  ; 0 characters to print
+    call WRITELN                ; print blank line
     ; accept operand 1
-    ; PROMPT_STR_INPUT(&rdi, PROMPT_1, rcx, PROMPT_1.LEN, &rax);
+    ; PROMPT_STR_INPUT(&rdi, PROMPT_1, &rcx, PROMPT_1.LEN, &rax);
     mov  rsi,PROMPT_1           ; prompt to print
     mov  rcx,PROMPT_1.LEN       ; #characters in prompt
     call PROMPT_STR_INPUT       ; print the prompt and accept user input
+    ; temporarily store operand 1
+    mov  r13,rax                ; address
+    mov  r14,rcx                ; length
+    ; print blank line
+    ; C equivalent: WRITELN(rdi, 0);
+    mov  rdx,0                  ; 0 characters to print
+    call WRITELN                ; print blank line
+    ; permanently store operand 0
+    ; r8 already holds address
+    mov  rax,r9                 ; length
+    ; permanently store operand 1
+    mov  rdi,r13                ; address
+    mov  rdx,r14                ; length
+    pop  r14                    ; restore general purpose
+    pop  r13                    ; restore general purpose
+    pop  r9                     ; restore general purpose
     ret
-; end PROMPT_AND_GET_REVERSES
+; end PROMPT_AND_GET_STRINGS
 
 
 ; PROMPT_STR_INPUT(char **rdi, char *rsi, int rdx, int *rcx, char *rax)
@@ -73,15 +120,6 @@ PROMPT_STR_INPUT:
     ; NEXT_TOKEN(rdi, rcx, rax);
     call NEXT_TOKEN
     ; output the string found
-    push rdi
-    push rdx
-    mov  rsi,rax
-    mov  rdx,rcx
-    mov  rax,sys_write  ; system call to perform
-    mov  rdi,FD_STDOUT  ; file descriptor to which to write
-    syscall     ; execute the system call
-    pop  rdx
-    pop  rdi
     ret
 ; end PROMPT_STR_INPUT
 
@@ -123,7 +161,7 @@ NEXT_TOKEN__LEN_LOOP_END:
 ; end NEXT_TOKEN
 
 
-; WRITELN(char *rdi, int rdx)
+; WRITELN(char *rsi, int rdx)
 ; Writes the given string followed by a newline character.
 ; @param
 ;   rsi : char *= string to write, followed by a newline
@@ -347,8 +385,8 @@ ENDL:           db 0ah
 ;   This is used because each address in x86-64 is
 ;   64-bits = 8 bytes = 1 quad word.
 QWORD_SIZE:     equ 8
-;   maximum length of a Pascal string
-PAS_STR_LEN:    equ 255
+;   maximum length for input
+MAX_IP_LEN:     equ 255
 
 ; Error strings:
 END_OF_INPUT:   db 0ah, "End of input was reached while parsing.", 0ah
@@ -392,7 +430,7 @@ OP_END_LBL.LEN:    equ ($ - OP_END_LBL)
 ;   number of operations to allow
 N_OPERATIONS:   equ 1
 ;   length of input buffer (2 space-separated integers/operation)
-IP_CBUF.LEN:    equ (N_OPERATIONS * (2 * (PAS_STR_LEN + 1)))
+IP_CBUF.LEN:    equ (N_OPERATIONS * (2 * (MAX_IP_LEN + 1)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -400,13 +438,6 @@ IP_CBUF.LEN:    equ (N_OPERATIONS * (2 * (PAS_STR_LEN + 1)))
 section .bss
 ; character buffer for input
 IP_CBUF:        resb IP_CBUF.LEN
-; allocate space for string representations of integers
-; allocate space for each operator
-P_OPERAND_0:    resq QWORD_SIZE
-P_OPERAND_1:    resq QWORD_SIZE
-; allocate space for the reverse of the operators (plus length)
-OPERAND_0_REV:  resb (1 + PAS_STR_LEN)
-OPERAND_1_REV:  resb (1 + PAS_STR_LEN)
 ; the result of the operation to output
-OP_RESULT:      resb (1 + PAS_STR_LEN)
+OP_RESULT:      resb MAX_IP_LEN
 
