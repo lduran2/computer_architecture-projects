@@ -434,28 +434,28 @@ INT_LEN:        equ 21
 
 ; example of string defined in bytes
 ;       db      define byte       =  1 byte  =  8 bits
-DB_STRING:      db "Hello world!"
+DB_STRING:      db "Hello, world!"
 DB_STRING.LEN:  equ ($ - DB_STRING)
 
 ; example of string defined in words
 ;       dw      define word       =  2 bytes = 16 bits
-DW_STRING:      dw "Hello world!"
+DW_STRING:      dw "Hello, world!"
 DW_STRING.LEN:  equ ($ - DW_STRING)
 
 ; example of string defined in doublewords
 ;       dd      define doubleword =  4 bytes = 32 bits
-DD_STRING:      dd "Hello world!"
+DD_STRING:      dd "Hello, world!"
 DD_STRING.LEN:  equ ($ - DD_STRING)
 
 ; example of string defined in quadwords
 ;       dq      define quadword   =  8 bytes = 64 bits
-DQ_STRING:      dq "Hello world!"
+DQ_STRING:      dq "Hello, world!"
 DQ_STRING.LEN:  equ ($ - DQ_STRING)
 
 ; example of string defined in ten bytes
 ;       dt      define ten bytes  = 10 bytes = 80 bits
 ; Note that character escaping (e.g., 0ah) would not work with dt.
-DT_STRING:      dt "Hello world!"
+DT_STRING:      dt "Hello, world!"
 DT_STRING.LEN:  equ ($ - DT_STRING)
 
 ; example of an equated value
@@ -471,7 +471,7 @@ EQU_LEN:        equ ($ - (BEFORE_EQU + 1))
 DB_STR_LBL:     db 22h
 DB_STR_LBL.LEN: equ ($ - DB_STR_LBL)
 ; all following strings label
-STR_LBL_X1:     db " bytes.", 0ah, 22h
+STR_LBL_X1:     db " byte(s).", 0ah, 22h
 STR_LBL_X1.LEN: equ ($ - STR_LBL_X1)
 
 ; labels for lengths
@@ -487,9 +487,9 @@ DT_LEN_LBL:     db 22h, " in ten bytes occupies "
 DT_LEN_LBL.LEN: equ ($ - DT_LEN_LBL)
 
 ; label beginning and ending for equate
-EQU_LBL:        db " bytes.", 0ah, "An equated value occupies ",
+EQU_LBL:        db " byte(s).", 0ah, "An equated value occupies ",
 EQU_LBL.LEN:    equ ($ - EQU_LBL)
-EQU_END:        db " bytes."
+EQU_END:        db " byte(s)."
 EQU_END.LEN:    equ ($ - EQU_END)
 
 
