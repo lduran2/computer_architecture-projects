@@ -42,13 +42,13 @@ _start:
     mov rsi,DQ_STRING       ; word string to write
     mov rdx,DQ_STRING.LEN   ; length of the string to write
     syscall     ; execute the system call
-    ; ; C equivalent: write(FD_STDOUT, DT_STRING, DT_STRING.LEN);
-    ; ; print the greeting to standard output
-    ; mov rax,sys_write       ; system call to perform: sys_write
-    ; mov rdi,FD_STDOUT       ; file descriptor to which to write
-    ; mov rsi,DT_STRING       ; word string to write
-    ; mov rdx,DT_STRING.LEN   ; length of the string to write
-    ; syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DT_STRING, DT_STRING.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
+    mov rsi,DT_STRING       ; word string to write
+    mov rdx,DT_STRING.LEN   ; length of the string to write
+    syscall     ; execute the system call
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -72,7 +72,7 @@ section .data
 ;   into the symbol table.  Thus, after "equate", the address is the
 ;   same as before it, whereas after "define", the address is moved
 ;   forward as much as the definition required;  e.g.,
-;       STRING:   db "Hello world!", 0ah
+;       STRING:   db "Hello world!"
 ;   moves the address forward 13 bytes, the length of "Hello world!" +
 ;   a newline character.
 ;
@@ -88,45 +88,54 @@ EXIT_SUCCESS:   equ 0
 
 ; example of string defined in bytes
 ;       db      define byte       =  1 byte  =  8 bits
-DB_STRING:      db "Hello world!", 0ah
+DB_STRING:      db "Hello world!"
 DB_STRING.LEN:  equ ($ - DB_STRING)
 
 ; example of string defined in words
 ;       dw      define word       =  2 bytes = 16 bits
-DW_STRING:      dw "Hello world!", 0ah
+DW_STRING:      dw "Hello world!"
 DW_STRING.LEN:  equ ($ - DW_STRING)
 
 ; example of string defined in doublewords
 ;       dd      define doubleword =  4 bytes = 32 bits
-DD_STRING:      dd "Hello world!", 0ah
+DD_STRING:      dd "Hello world!"
 DD_STRING.LEN:  equ ($ - DD_STRING)
 
 ; example of string defined in quadwords
 ;       dq      define quadword   =  8 bytes = 64 bits
-DQ_STRING:      dq "Hello world!", 0ah
+DQ_STRING:      dq "Hello world!"
 DQ_STRING.LEN:  equ ($ - DQ_STRING)
 
-; ; example of string defined in ten bytes
-; ;       dt      define ten bytes  = 10 bytes = 80 bits
-; DT_STRING:      dt "Hello world!", 0ah
-; DT_STRING.LEN:  equ ($ - DT_STRING)
+; example of string defined in ten bytes
+;       dt      define ten bytes  = 10 bytes = 80 bits
+; Note that character escaping (e.g., 0ah) would not work with dt.
+DT_STRING:      dt "Hello world!"
+DT_STRING.LEN:  equ ($ - DT_STRING)
 
 ; example of an equated value
 EQU.LEN:        equ ($ - DQ_STRING.LEN)
 
 ; labels for the strings
-DB_LBL:         db 22h, "Hello world!", 22h, " in bytes occupies "
-DB_LBL.LEN:     equ ($ - DB_LBL)
-DW_LBL:         db " bytes.", 0ah, 22h, "Hello world!", 22h, " in words occupies "
-DW_LBL.LEN:     equ ($ - DW_LBL)
-DD_LBL:         db " bytes.", 0ah, 22h, "Hello world!", 22h, " in doublewords occupies "
-DD_LBL.LEN:     equ ($ - DD_LBL)
-DQ_LBL:         db " bytes.", 0ah, 22h, "Hello world!", 22h, " in quadwords occupies "
-DQ_LBL.LEN:     equ ($ - DQ_LBL)
-DT_LBL:         db " bytes.", 0ah, 22h, "Hello world!", 22h, " in ten bytes occupies "
-DT_LBL.LEN:     equ ($ - DT_LBL)
+; first string label beginning
+LBL_0:          db 22h
+LBL_0.LEN:      equ ($ - LBL_0)
+; all following strings label beginning
+LBL_X1:         db " bytes.", 0ah, 22h
+LBL_X1.LEN:     equ ($ - LBL_X1)
+; labels endings
+DB_END:         db 22h, " in bytes occupies "
+DB_END.LEN:     equ ($ - DB_END)
+DW_END:         db 22h, " in words occupies "
+DW_END.LEN:     equ ($ - DW_END)
+DD_END:         db 22h, " in doublewords occupies "
+DD_END.LEN:     equ ($ - DD_END)
+DQ_END:         db 22h, " in quadwords occupies "
+DQ_END.LEN:     equ ($ - DQ_END)
+DT_END:         db 22h, " in ten bytes occupies "
+DT_END.LEN:     equ ($ - DT_END)
+; label beginning and ending for equate
 EQU_LBL:        db " bytes.", 0ah, "An equated value occupies ",
 EQU_LBL.LEN:    equ ($ - EQU_LBL)
-END_LBL:        db " bytes."
-END_LBL.LEN:    equ ($ - END_LBL)
+EQU_END:        db " bytes."
+EQU_END.LEN:    equ ($ - EQU_END)
 
