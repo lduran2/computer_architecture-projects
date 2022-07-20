@@ -14,41 +14,12 @@ section .text
 
 ; Beginning of the program to print a greeting.
 _start:
-    ; C equivalent: write(FD_STDOUT, DB_STRING, DB_STRING.LEN);
-    ; print the greeting to standard output
-    mov rax,sys_write       ; system call to perform: sys_write
-    mov rdi,FD_STDOUT       ; file descriptor to which to write
-    mov rsi,DB_STRING       ; byte string to write
-    mov rdx,DB_STRING.LEN   ; length of the string to write
-    syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, DW_STRING, DW_STRING.LEN);
-    ; print the greeting to standard output
-    mov rax,sys_write       ; system call to perform: sys_write
-    mov rdi,FD_STDOUT       ; file descriptor to which to write
-    mov rsi,DW_STRING       ; word string to write
-    mov rdx,DW_STRING.LEN   ; length of the string to write
-    syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, DD_STRING, DD_STRING.LEN);
-    ; print the greeting to standard output
-    mov rax,sys_write       ; system call to perform: sys_write
-    mov rdi,FD_STDOUT       ; file descriptor to which to write
-    mov rsi,DD_STRING       ; word string to write
-    mov rdx,DD_STRING.LEN   ; length of the string to write
-    syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, DQ_STRING, DQ_STRING.LEN);
-    ; print the greeting to standard output
-    mov rax,sys_write       ; system call to perform: sys_write
-    mov rdi,FD_STDOUT       ; file descriptor to which to write
-    mov rsi,DQ_STRING       ; word string to write
-    mov rdx,DQ_STRING.LEN   ; length of the string to write
-    syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, DT_STRING, DT_STRING.LEN);
-    ; print the greeting to standard output
-    mov rax,sys_write       ; system call to perform: sys_write
-    mov rdi,FD_STDOUT       ; file descriptor to which to write
-    mov rsi,DT_STRING       ; word string to write
-    mov rdx,DT_STRING.LEN   ; length of the string to write
-    syscall     ; execute the system call
+    call PRINT_DB
+    call PRINT_DW
+    call PRINT_DD
+    call PRINT_DQ
+    call PRINT_DT
+    call PRINT_EQU
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -57,6 +28,156 @@ END:
     mov rdi,EXIT_SUCCESS    ; errorlevel (0 = EXIT_SUCCESS)
     syscall     ; execute the system call
 ; end _start
+
+
+; Prints the "define byte" string, and its length in a statement.
+PRINT_DB:
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
+    ; C equivalent: write(FD_STDOUT, DB_LBL, DB_LBL.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DB_LBL          ; byte string to write
+    mov rdx,DB_LBL.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DB_STRING, DB_STRING.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DB_STRING       ; byte string to write
+    mov rdx,DB_STRING.LEN   ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DB_END, DB_END.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DB_END          ; byte string to write
+    mov rdx,DB_END.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; return now
+    ret
+; end PRINT_DB
+
+
+; Prints the "define word" string, and its length in a statement.
+PRINT_DW:
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
+    ; C equivalent: write(FD_STDOUT, LBL_X1, LBL_X1.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,LBL_X1          ; label beginning to write
+    mov rdx,LBL_X1.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DW_STRING, DW_STRING.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DW_STRING       ; word string to write
+    mov rdx,DW_STRING.LEN   ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DW_END, DW_END.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DW_END          ; ending to write
+    mov rdx,DW_END.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; return now
+    ret
+; end PRINT_DW
+
+
+; Prints the "define doubleword" string, and its length in a statement.
+PRINT_DD:
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
+    ; C equivalent: write(FD_STDOUT, LBL_X1, LBL_X1.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,LBL_X1          ; label beginning to write
+    mov rdx,LBL_X1.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DD_STRING, DD_STRING.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DD_STRING       ; doubleword string to write
+    mov rdx,DD_STRING.LEN   ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DD_END, DD_END.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DD_END          ; ending to write
+    mov rdx,DD_END.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; return now
+    ret
+; end PRINT_DD
+
+
+; Prints the "define quadword" string, and its length in a statement.
+PRINT_DQ:
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
+    ; C equivalent: write(FD_STDOUT, LBL_X1, LBL_X1.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,LBL_X1          ; label beginning to write
+    mov rdx,LBL_X1.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DQ_STRING, DQ_STRING.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DQ_STRING       ; quadword string to write
+    mov rdx,DQ_STRING.LEN   ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DQ_END, DQ_END.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DQ_END          ; ending to write
+    mov rdx,DQ_END.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; return now
+    ret
+; end PRINT_DQ
+
+
+; Prints the "define ten bytes" string, and its length in a statement.
+PRINT_DT:
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
+    ; C equivalent: write(FD_STDOUT, LBL_X1, LBL_X1.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,LBL_X1          ; label beginning to write
+    mov rdx,LBL_X1.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DT_STRING, DT_STRING.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DT_STRING       ; ten-byte string to write
+    mov rdx,DT_STRING.LEN   ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, DT_END, DT_END.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,DT_END          ; ending to write
+    mov rdx,DT_END.LEN      ; length of the string to write
+    syscall     ; execute the system call
+    ; return now
+    ret
+; end PRINT_DT
+
+
+; Prints the length of the "equate" in a statement.
+PRINT_EQU:
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
+    ; C equivalent: write(FD_STDOUT, LBL_X1, LBL_X1.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,EQU_LBL         ; label beginning to write
+    mov rdx,EQU_LBL.LEN     ; length of the string to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, EQU_END, EQU_END.LEN);
+    ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rsi,EQU_END         ; ending to write
+    mov rdx,EQU_END.LEN     ; length of the string to write
+    syscall     ; execute the system call
+    ; return now
+    ret
+; end PRINT_EQU
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -117,8 +238,8 @@ EQU.LEN:        equ ($ - DQ_STRING.LEN)
 
 ; labels for the strings
 ; first string label beginning
-LBL_0:          db 22h
-LBL_0.LEN:      equ ($ - LBL_0)
+DB_LBL:         db 22h
+DB_LBL.LEN:     equ ($ - DB_LBL)
 ; all following strings label beginning
 LBL_X1:         db " bytes.", 0ah, 22h
 LBL_X1.LEN:     equ ($ - LBL_X1)
