@@ -14,29 +14,38 @@ section .text
 
 ; Beginning of the program to print a greeting.
 _start:
-    mov rax,sys_write       ; system call to perform: sys_write
-    mov rdi,FD_STDOUT       ; file descriptor to which to write
     ; C equivalent: write(FD_STDOUT, DB_STRING, DB_STRING.LEN);
     ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
     mov rsi,DB_STRING       ; byte string to write
     mov rdx,DB_STRING.LEN   ; length of the string to write
     syscall     ; execute the system call
     ; C equivalent: write(FD_STDOUT, DW_STRING, DW_STRING.LEN);
     ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
     mov rsi,DW_STRING       ; word string to write
     mov rdx,DW_STRING.LEN   ; length of the string to write
     syscall     ; execute the system call
     ; C equivalent: write(FD_STDOUT, DD_STRING, DD_STRING.LEN);
     ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
     mov rsi,DD_STRING       ; word string to write
     mov rdx,DD_STRING.LEN   ; length of the string to write
     syscall     ; execute the system call
     ; C equivalent: write(FD_STDOUT, DQ_STRING, DQ_STRING.LEN);
     ; print the greeting to standard output
+    mov rax,sys_write       ; system call to perform: sys_write
+    mov rdi,FD_STDOUT       ; file descriptor to which to write
     mov rsi,DQ_STRING       ; word string to write
     mov rdx,DQ_STRING.LEN   ; length of the string to write
-    ; C equivalent: write(FD_STDOUT, DT_STRING, DT_STRING.LEN);
-    ; print the greeting to standard output
+    syscall     ; execute the system call
+    ; ; C equivalent: write(FD_STDOUT, DT_STRING, DT_STRING.LEN);
+    ; ; print the greeting to standard output
+    ; mov rax,sys_write       ; system call to perform: sys_write
+    ; mov rdi,FD_STDOUT       ; file descriptor to which to write
     ; mov rsi,DT_STRING       ; word string to write
     ; mov rdx,DT_STRING.LEN   ; length of the string to write
     ; syscall     ; execute the system call
@@ -97,8 +106,8 @@ DD_STRING.LEN:  equ ($ - DD_STRING)
 DQ_STRING:      dq "Hello world!", 0ah
 DQ_STRING.LEN:  equ ($ - DQ_STRING)
 
-; example of string defined in ten bytes
-;       dt      define ten bytes  = 10 bytes = 80 bits
+; ; example of string defined in ten bytes
+; ;       dt      define ten bytes  = 10 bytes = 80 bits
 ; DT_STRING:      dt "Hello world!", 0ah
 ; DT_STRING.LEN:  equ ($ - DT_STRING)
 
