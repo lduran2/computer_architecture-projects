@@ -477,11 +477,11 @@ STR_LBL_X1.LEN: equ ($ - STR_LBL_X1)
 ; labels for lengths
 DB_LEN_LBL:     db 22h, " in bytes occupies "
 DB_LEN_LBL.LEN: equ ($ - DB_LEN_LBL)
-DW_LEN_LBL:     db 22h, " in words occupies "
+DW_LEN_LBL:     db 22h, " in 2-byte words occupies "
 DW_LEN_LBL.LEN: equ ($ - DW_LEN_LBL)
-DD_LEN_LBL:     db 22h, " in doublewords occupies "
+DD_LEN_LBL:     db 22h, " in 4-byte doublewords occupies "
 DD_LEN_LBL.LEN: equ ($ - DD_LEN_LBL)
-DQ_LEN_LBL:     db 22h, " in quadwords occupies "
+DQ_LEN_LBL:     db 22h, " in 8-byte quadwords occupies "
 DQ_LEN_LBL.LEN: equ ($ - DQ_LEN_LBL)
 DT_LEN_LBL:     db 22h, " in ten bytes occupies "
 DT_LEN_LBL.LEN: equ ($ - DT_LEN_LBL)
