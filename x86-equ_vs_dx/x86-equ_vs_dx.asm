@@ -67,6 +67,7 @@ PRINT_DB:
     mov  rax,sys_write          ; system call to perform
     mov  rdi,FD_STDOUT          ; file descriptor to which to write
     syscall                     ; execute the system call
+    ; return
     ret
 ; end PRINT_DB
 
@@ -92,7 +93,23 @@ PRINT_DW:
     mov rsi,DW_LEN_LBL      ; ending to write
     mov rdx,DW_LEN_LBL.LEN  ; length of the string to write
     syscall     ; execute the system call
-    ; return now
+    ; convert length to an ASCII character string
+    mov  rax,DW_STRING.LEN  ; copy r8 into rax
+    ; since r8 is 64-bit, we can sign extend to fill the higher 64-bits
+    call SIGN128                ; perform sign extension
+    ; now rdx:rax is ready for DITOA
+    mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
+    call DITOA                  ; perform Decimal Integer TO Ascii
+    ; set up for the print statement . . .
+    ; C equivalent: write(FD_STDOUT, rdi, rdx);
+    ; we move rdi to rsi now because we will need rdi for FD_STDOUT
+    mov  rsi,rdi                ; move the buffer to rsi for sys_write
+    ; rdx already contains the length of the buffer
+    ; as a result of DITOA
+    mov  rax,sys_write          ; system call to perform
+    mov  rdi,FD_STDOUT          ; file descriptor to which to write
+    syscall                     ; execute the system call
+    ; return
     ret
 ; end PRINT_DW
 
@@ -118,7 +135,23 @@ PRINT_DD:
     mov rsi,DD_LEN_LBL      ; ending to write
     mov rdx,DD_LEN_LBL.LEN  ; length of the string to write
     syscall     ; execute the system call
-    ; return now
+    ; convert length to an ASCII character string
+    mov  rax,DD_STRING.LEN  ; copy r8 into rax
+    ; since r8 is 64-bit, we can sign extend to fill the higher 64-bits
+    call SIGN128                ; perform sign extension
+    ; now rdx:rax is ready for DITOA
+    mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
+    call DITOA                  ; perform Decimal Integer TO Ascii
+    ; set up for the print statement . . .
+    ; C equivalent: write(FD_STDOUT, rdi, rdx);
+    ; we move rdi to rsi now because we will need rdi for FD_STDOUT
+    mov  rsi,rdi                ; move the buffer to rsi for sys_write
+    ; rdx already contains the length of the buffer
+    ; as a result of DITOA
+    mov  rax,sys_write          ; system call to perform
+    mov  rdi,FD_STDOUT          ; file descriptor to which to write
+    syscall                     ; execute the system call
+    ; return
     ret
 ; end PRINT_DD
 
@@ -144,7 +177,23 @@ PRINT_DQ:
     mov rsi,DQ_LEN_LBL      ; ending to write
     mov rdx,DQ_LEN_LBL.LEN  ; length of the string to write
     syscall     ; execute the system call
-    ; return now
+    ; convert length to an ASCII character string
+    mov  rax,DQ_STRING.LEN  ; copy r8 into rax
+    ; since r8 is 64-bit, we can sign extend to fill the higher 64-bits
+    call SIGN128                ; perform sign extension
+    ; now rdx:rax is ready for DITOA
+    mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
+    call DITOA                  ; perform Decimal Integer TO Ascii
+    ; set up for the print statement . . .
+    ; C equivalent: write(FD_STDOUT, rdi, rdx);
+    ; we move rdi to rsi now because we will need rdi for FD_STDOUT
+    mov  rsi,rdi                ; move the buffer to rsi for sys_write
+    ; rdx already contains the length of the buffer
+    ; as a result of DITOA
+    mov  rax,sys_write          ; system call to perform
+    mov  rdi,FD_STDOUT          ; file descriptor to which to write
+    syscall                     ; execute the system call
+    ; return
     ret
 ; end PRINT_DQ
 
@@ -170,7 +219,23 @@ PRINT_DT:
     mov rsi,DT_LEN_LBL      ; ending to write
     mov rdx,DT_LEN_LBL.LEN  ; length of the string to write
     syscall     ; execute the system call
-    ; return now
+    ; convert length to an ASCII character string
+    mov  rax,DT_STRING.LEN  ; copy r8 into rax
+    ; since r8 is 64-bit, we can sign extend to fill the higher 64-bits
+    call SIGN128                ; perform sign extension
+    ; now rdx:rax is ready for DITOA
+    mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
+    call DITOA                  ; perform Decimal Integer TO Ascii
+    ; set up for the print statement . . .
+    ; C equivalent: write(FD_STDOUT, rdi, rdx);
+    ; we move rdi to rsi now because we will need rdi for FD_STDOUT
+    mov  rsi,rdi                ; move the buffer to rsi for sys_write
+    ; rdx already contains the length of the buffer
+    ; as a result of DITOA
+    mov  rax,sys_write          ; system call to perform
+    mov  rdi,FD_STDOUT          ; file descriptor to which to write
+    syscall                     ; execute the system call
+    ; return
     ret
 ; end PRINT_DT
 
