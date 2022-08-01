@@ -1,0 +1,8 @@
+v1.1.1 - 2022-08-01t19:08Q
+    replaced `test *,-1` with `cmp *,0`
+
+v1.1.0 - 2022-08-01t19:06Q
+    optimized DITOA for unsigned integers
+
+v1.0.0 - 2022-07-17t02:11Q
+    implemented, documented
