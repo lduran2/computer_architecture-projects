@@ -52,8 +52,6 @@ _start:
     inc  r8                     ; increment the value
     ; convert to an ASCII character string
     mov  rax,r8                 ; copy r8 into rax
-    ; since r8 is 64-bit, we can sign extend to fill the higher 64-bits
-    ; call SIGN128                ; perform sign extension
     ; now rdx:rax is ready for DUTOA
     mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
     call DUTOA                  ; perform Decimal Integer TO Ascii
@@ -110,17 +108,6 @@ DUTOA_IMPL:
     push r10            ; backup general purpose r10 for sign register
     mov  r8,0           ; clear digit count
     mov  r9,10          ; set up radix for division
-    ; mov  r10,rdx            ; copy high quad word into sign flag
-    ; ; handle sign
-    ; test r10,-1             ; test sign bit
-    ; jz   DUTOA_NOW_POSITIVE ; if reset, then already positive
-    ; ; otherwise
-    ; not  rax                ; flip low  quad word (1s' complement)
-    ; not  rdx                ; flip high quad word (1s' complement)
-    ; add  rax,1              ; increment for 2s' complement
-    ; adc  rdx,0              ; carry     for 2s' complement
-; ; upon reaching this label, (rdx:rax) is positive, with sign in r10
-; DUTOA_NOW_POSITIVE:
 ; loop while dividing (rdx:rax) by radix (10)
 ; and pushing each digit onto the stack
 DUTOA_DIVIDE_INT_LOOP:
@@ -139,11 +126,6 @@ DUTOA_DIVIDE_INT_LOOP:
     jz   DUTOA_DIVIDE_INT_LOOP_END  ; then break
     jmp  DUTOA_DIVIDE_INT_LOOP  ; repeat
 DUTOA_DIVIDE_INT_LOOP_END:
-    ; test r10,-1             ; test sign bit
-    ; jz   DUTOA_CLEANUP      ; if reset, skip adding '-'
-    ; inc  r8                 ; extra character for '-'
-    ; mov  rdx,'-'            ; set the '-'
-    ; push rdx                ; append '-'
 ; reverse the string of digits
 DUTOA_CLEANUP:
     mov  rsi,rdi        ; use the string so far as the source
