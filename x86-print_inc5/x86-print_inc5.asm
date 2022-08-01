@@ -7,7 +7,7 @@
 ; For this implementation, DUTOA was based off of DITOA, but optimized
 ; for unsigned integers.  Thus, the sign bit is assumed to be 0, which
 ; means that SIGN128 will not be needed.  However, since DITOA also
-; depends on STRREV, we will also need this.
+; depends on STRREV_POP_INIT, we will also need this.
 ; DUTOA also accepts a character buffer in rdi, which we will need to
 ; allocate in the .bss section.
 
@@ -87,9 +87,7 @@ END:
 ; @param
 ;   rdi : out char * = string converted from integer
 ; @param
-;   rdx :
-;       in  int * = upper quad word of integer to convert
-;       out int * = length of string converted from integer
+;   rdx : int * = length of string converted from integer
 ; @param
 ;   rax : int = lower quad word of integer to convert
 DUTOA:
@@ -114,7 +112,7 @@ DUTOA_DIVIDE_INT_LOOP:
     ; Since idiv operates on 128-bit (rdx:rax), rdx must be assigned.
     ; rdx must be reassigned at the beginning of each iteration because
     ; at the end, it will contain the remainder of the last division
-    mov  rdx,0                  ; assign 0 because rax is positive
+    mov  rdx,0                  ; assign 0 because rax is unsigned
     ; (rax, rdx) = divmod((rdx:rax), 10)
     ; Divide (rdx:rax) by 10.
     ; idiv will store the quotient in rax, and the remainder in rdx.
@@ -122,59 +120,13 @@ DUTOA_DIVIDE_INT_LOOP:
     or   rdx,'0'                ; convert modulo to numeric digit
     push rdx                    ; store the digit
     inc  r8                     ; count digits so far
-    test rax,-1                 ; if (!quotient)
-    jz   DUTOA_DIVIDE_INT_LOOP_END  ; then break
-    jmp  DUTOA_DIVIDE_INT_LOOP  ; repeat
+    cmp  rax,0                  ; if (quotient != 0)
+    jne  DUTOA_DIVIDE_INT_LOOP  ;       then repeat
 DUTOA_DIVIDE_INT_LOOP_END:
 ; reverse the string of digits
 DUTOA_CLEANUP:
     mov  rsi,rdi        ; use the string so far as the source
     mov  rdx,r8         ; store string length
-    jmp  STRREV_POP_INIT    ; pop digits off the stack onto rdi
-; end DUTOA
-
-
-; SIGN128(int *rdx, int rax)
-; Copy the sign bit bit from rax over to rdx.
-; @param
-;   rdx : int * = pointer to higher quad word
-; @param
-;   rax : int   = lower  quad word
-SIGN128:
-    mov  rdx,rax                ; copy low bits into high bits
-    sar  rdx,63                 ; shift sign bit through rdx
-    ; done copying sign bit
-    ret
-; end SIGN128
-
-
-; STRREV(char *rdi, char *rsi, int rdx)
-; Reverses a string in rsi using the stack and places it in rdi.
-;
-; It can be that (rdi==rsi), in which case this is an in-place
-; operation.
-;
-; @param
-;   rdi : out char * = the reversed string
-; @param
-;   rsi : in  char * = the string to reverse
-; @param
-;   rdx : int = length of string to reverse
-STRREV:
-    push rcx            ; backup counter
-    push r8             ; backup general purpose r8 for source address
-    push r9             ; backup general purpose r9 for character
-    push r10            ; backup general purpose r10 for sink address
-    mov  rcx,rdx        ; set counter to rdx
-    mov  r8,rsi         ; initialize the source address
-; push each character onto the stack
-STRREV_PUSH_LOOP:
-    mov  r9,[r8]            ; copy the character
-    push r9                 ; push it onto stack
-    inc  r8                 ; next character in source
-    loop STRREV_PUSH_LOOP   ; repeat
-STRREV_PUSH_LOOP_END:
-; initialize for popping each character
 STRREV_POP_INIT:
     mov  rcx,rdx        ; set counter to rdx
     mov  r10,rdi        ; initialize the sink address
@@ -190,7 +142,7 @@ STRREV_POP_LOOP_END:
     pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
     ret
-; end STRREV
+; end DUTOA
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

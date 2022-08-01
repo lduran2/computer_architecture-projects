@@ -1,8 +1,11 @@
-v1.1.1 - 2022-08-01t19:08Q
+v2.1.0 - 2022-08-01t19:28Q
+    inline STRREV_POP_INIT into DUTOA
+
+v2.0.1 - 2022-08-01t19:08Q
     replaced `test *,-1` with `cmp *,0`
 
-v1.1.0 - 2022-08-01t19:06Q
-    optimized DITOA for unsigned integers
+v2.0.0 - 2022-08-01t19:06Q
+    optimized DITOA for unsigned integers (as DUTOA)
 
 v1.0.0 - 2022-07-17t02:11Q
     implemented, documented
