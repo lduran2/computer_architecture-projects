@@ -1,12 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Canonical : https://github.com/lduran2/computer_architecture-projects/blob/master/x86-print_inc5/x86-print_inc5.asm
 ; Stores 5 in a register, increments the value and prints the result.
-; This implementation uses the DITOA procedure that we implemented.
+; This implementation uses the DUTOA procedure that we implemented.
 ;
 
-; For this implementation, we need DITOA.  Since DITOA depends on
-; SIGN128 and STRREV, we will also need these.
-; DITOA accepts a character buffer in rdi, which we will need to
+; For this implementation, DUTOA was based off of DITOA, but optimized
+; for unsigned integers.  Thus, the sign bit is assumed to be 0, which
+; means that SIGN128 will not be needed.  However, since DITOA also
+; depends on STRREV, we will also need this.
+; DUTOA also accepts a character buffer in rdi, which we will need to
 ; allocate in the .bss section.
 
 ; Since there are 16 characters, different system calls and procedures
@@ -28,7 +30,7 @@
 ; INT_STR_REP ----------------------------------> rdi ----+->|       | -+-> rdi -> rsi ->|         |
 ;  buffer                          +---------+               |       |                   |         |
 ;                                  |         |               |       |                   |         |
-;           +-----+                |         |               | DITOA |                   |         |
+;           +-----+                |         |               | DUTOA |                   |         |
 ; 5 -> r8 ->| inc | -> r8 -> rax ->| SIGN128 | -> rdx:rax -->|       |                   |         |
 ;           +-----+     ìnteger    |         |     integer   |       |                   |         |
 ;                       to print   |         |     to print  |       | ---> rdx -------->|         |
@@ -51,16 +53,16 @@ _start:
     ; convert to an ASCII character string
     mov  rax,r8                 ; copy r8 into rax
     ; since r8 is 64-bit, we can sign extend to fill the higher 64-bits
-    call SIGN128                ; perform sign extension
-    ; now rdx:rax is ready for DITOA
+    ; call SIGN128                ; perform sign extension
+    ; now rdx:rax is ready for DUTOA
     mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
-    call DITOA                  ; perform Decimal Integer TO Ascii
+    call DUTOA                  ; perform Decimal Integer TO Ascii
     ; set up for the print statement . . .
     ; C equivalent: write(FD_STDOUT, rdi, rdx);
     ; we move rdi to rsi now because we will need rdi for FD_STDOUT
     mov  rsi,rdi                ; move the buffer to rsi for sys_write
     ; rdx already contains the length of the buffer
-    ; as a result of DITOA
+    ; as a result of DUTOA
     mov  rax,sys_write          ; system call to perform
     mov  rdi,FD_STDOUT          ; file descriptor to which to write
     syscall                     ; execute the system call
@@ -79,10 +81,11 @@ END:
 ; end _start
 
 
-; DITOA(char *rdi, int *rdx, int rax)
-; Decimal Integer TO Ascii
-; converts an integer into an ASCII string representation.
-; This implementation is optimized for decimal integers.
+; DUTOA(char *rdi, int *rdx, int rax)
+; Decimal Unsigned integer TO Ascii
+; converts an unsigned integer into a decimal ASCII string
+; representation.
+; This implementation is optimized for decimal unsigned integers.
 ; @param
 ;   rdi : out char * = string converted from integer
 ; @param
@@ -91,15 +94,15 @@ END:
 ;       out int * = length of string converted from integer
 ; @param
 ;   rax : int = lower quad word of integer to convert
-DITOA:
+DUTOA:
     push rsi            ; backup source index for reverse source
-    call DITOA_IMPL     ; call the implementation
+    call DUTOA_IMPL     ; call the implementation
     pop  rsi            ; restore source index
     ret
 ; push the digits of the integer onto stack
 ; The digits will be backwards.
 ; Then inline STRREV_POP_INIT.
-DITOA_IMPL:
+DUTOA_IMPL:
     push rcx            ; for STRREV: backup counter
     push r8             ; backup general purpose r8 for digit count
     push r9             ; backup general purpose r9 for radix and
@@ -107,42 +110,46 @@ DITOA_IMPL:
     push r10            ; backup general purpose r10 for sign register
     mov  r8,0           ; clear digit count
     mov  r9,10          ; set up radix for division
-    mov  r10,rdx            ; copy high quad word into sign flag
-    ; handle sign
-    test r10,-1             ; test sign bit
-    jz   DITOA_NOW_POSITIVE ; if reset, then already positive
-    ; otherwise
-    not  rax                ; flip low  quad word (1s' complement)
-    not  rdx                ; flip high quad word (1s' complement)
-    add  rax,1              ; increment for 2s' complement
-    adc  rdx,0              ; carry     for 2s' complement
-; upon reaching this label, (rdx:rax) is positive, with sign in r10
-DITOA_NOW_POSITIVE:
+    ; mov  r10,rdx            ; copy high quad word into sign flag
+    ; ; handle sign
+    ; test r10,-1             ; test sign bit
+    ; jz   DUTOA_NOW_POSITIVE ; if reset, then already positive
+    ; ; otherwise
+    ; not  rax                ; flip low  quad word (1s' complement)
+    ; not  rdx                ; flip high quad word (1s' complement)
+    ; add  rax,1              ; increment for 2s' complement
+    ; adc  rdx,0              ; carry     for 2s' complement
+; ; upon reaching this label, (rdx:rax) is positive, with sign in r10
+; DUTOA_NOW_POSITIVE:
 ; loop while dividing (rdx:rax) by radix (10)
 ; and pushing each digit onto the stack
-DITOA_DIVIDE_INT_LOOP:
-    ; (rax, rdx) = divmod((rdx:rax), 10);
-    idiv r9                     ; divide (rdx:rax) by radix
+DUTOA_DIVIDE_INT_LOOP:
+    ; Since idiv operates on 128-bit (rdx:rax), rdx must be assigned.
+    ; rdx must be reassigned at the beginning of each iteration because
+    ; at the end, it will contain the remainder of the last division
+    mov  rdx,0                  ; assign 0 because rax is positive
+    ; (rax, rdx) = divmod((rdx:rax), 10)
+    ; Divide (rdx:rax) by 10.
+    ; idiv will store the quotient in rax, and the remainder in rdx.
+    idiv r9                     ; perform the division
     or   rdx,'0'                ; convert modulo to numeric digit
     push rdx                    ; store the digit
     inc  r8                     ; count digits so far
     test rax,-1                 ; if (!quotient)
-    jz   DITOA_DIVIDE_INT_LOOP_END  ; then break
-    ; C equivalent: SIGN128(&rdx, rax);
-    call SIGN128                ; extend sign bit
-    jmp  DITOA_DIVIDE_INT_LOOP  ; repeat
-DITOA_DIVIDE_INT_LOOP_END:
-    test r10,-1             ; test sign bit
-    jz   DITOA_CLEANUP      ; if reset, skip adding '-'
-    inc  r8                 ; extra character for '-'
-    mov  rdx,'-'            ; set the '-'
-    push rdx                ; append '-'
+    jz   DUTOA_DIVIDE_INT_LOOP_END  ; then break
+    jmp  DUTOA_DIVIDE_INT_LOOP  ; repeat
+DUTOA_DIVIDE_INT_LOOP_END:
+    ; test r10,-1             ; test sign bit
+    ; jz   DUTOA_CLEANUP      ; if reset, skip adding '-'
+    ; inc  r8                 ; extra character for '-'
+    ; mov  rdx,'-'            ; set the '-'
+    ; push rdx                ; append '-'
 ; reverse the string of digits
-DITOA_CLEANUP:
+DUTOA_CLEANUP:
     mov  rsi,rdi        ; use the string so far as the source
     mov  rdx,r8         ; store string length
     jmp  STRREV_POP_INIT    ; pop digits off the stack onto rdi
-; end DITOA
+; end DUTOA
 
 
 ; SIGN128(int *rdx, int rax)
