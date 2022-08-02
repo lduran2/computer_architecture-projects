@@ -10,10 +10,67 @@
 ; depends on STRREV_POP_INIT, we will also need this.
 ; DUTOA also accepts a character buffer in rdi, which we will need to
 ; allocate in the .bss section.
+;
+; We also included WRITELN to make printing easier.
 
-; Since there are 16 characters, different system calls and procedures
+; Since 16 registers are available, different system calls and procedures
 ; will expect a value to be at a specific register before the call.
-; As a result, we must expect registers to be repurposed.
+; As a result, we must expect registers to be repurposed,
+; but we will avoid this as much as possible.
+
+;;;;;;;;;;;;;;;;;;;;;;;;;
+; Required register use ;
+;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; We are required to use these registers for these purposes.
+;
+; syscall requires
+;       rax for the system call to perform
+;
+; sys_write
+;   requires
+;       rax for sys_write
+;       rdi for the file descriptor of the stream to which to write
+;       rsi for the address of character 0 of the string to write
+;       rdx for the length of the string to write
+;   outputs
+;       at rcx, copies the instruction pointer rip
+;       at r11, copies the flag register rflags
+;
+; sys_exit
+;   requires
+;       rax for sys_exit
+;       rdi for the exit call (e.g., EXIT_SUCCESS)
+;
+; idiv
+;   requires
+;       rax for the lower  quad word (64-bits) of the 128-bit dividend
+;       rdx for the higher quad word (64-bits) of the 128-bit dividend
+;   outputs
+;       at rax, the quotient
+;       at rdx, the remainder
+;
+; push
+;   output
+;       at rsp, when a new value is added, the stack pointer moves back
+;
+; pop
+;   output
+;       at rsp, when a value is remove, the stack pointer moves forward
+;
+; call
+;   output
+;       at rsp, the address of the next instruction after call is
+;           pushed onto stack
+;
+; ret
+;   output
+;       at rsp, pops the current value off the stack, then jumps to it
+;
+; loop
+;   requires
+;       rcx for the count down counter
+;
 
 ; In this example, we follow this diagram:
 ;
@@ -55,20 +112,12 @@ _start:
     ; now rdx:rax is ready for DUTOA
     mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
     call DUTOA                  ; perform Decimal Integer TO Ascii
-    ; set up for the print statement . . .
-    ; C equivalent: write(FD_STDOUT, rdi, rdx);
+    ; print the string representation on a line
     ; we move rdi to rsi now because we will need rdi for FD_STDOUT
     mov  rsi,rdi                ; move the buffer to rsi for sys_write
     ; rdx already contains the length of the buffer
     ; as a result of DUTOA
-    mov  rax,sys_write          ; system call to perform
-    mov  rdi,FD_STDOUT          ; file descriptor to which to write
-    syscall                     ; execute the system call
-    ; print a blank line
-    ; C equivalent: write(FD_STDOUT, ENDL, 1);
-    mov  rsi,ENDL               ; string to write
-    mov  rdx,1                  ; 1 character to write
-    syscall                     ; execute the system call
+    call WRITELN
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -143,6 +192,40 @@ STRREV_POP_LOOP_END:
     pop  rcx            ; restore counter
     ret
 ; end DUTOA
+
+
+; WRITELN(char *rdi, int rdx)
+; Writes the given string followed by a newline character.
+; @param
+;   rsi : char *= string to write, followed by a newline
+; @param
+;   rdx : int = length of the string rsi
+WRITELN:
+    ; set up
+    push rcx            ; guard from write changing rcx
+    push rsi            ; backup the string to print
+    push rdx            ; backup the size of the string
+    push rax            ; backup to hold the system call
+    push rdi            ; backup to hold the file descriptor
+    ; C equivalent: write(FD_STDOUT, rsi, rdx);
+    ; print the string in rsi
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
+    syscall     ; execute the system call
+    ; C equivalent: write(FD_STDOUT, ENDL, 1);
+    ; print the newline
+    mov  rax,sys_write  ; system call to perform
+    mov  rsi,ENDL       ; newline to print
+    mov  rdx,1          ; 1 character to print
+    syscall     ; execute the system call
+    ; clean up
+    pop  rdi            ; restore rdi
+    pop  rax            ; restore rax
+    pop  rdx            ; restore the size of the string
+    pop  rsi            ; restore the string to print
+    pop  rcx            ; restore rcx
+    ret
+; end WRITELN
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
