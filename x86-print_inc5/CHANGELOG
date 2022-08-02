@@ -1,6 +1,9 @@
 v2.2.0 - 2022-08-02t03:02Q
     documented Required register use
 
+v2.1.1 - 2022-08-01t20:00Q
+    using WRITELN for writing
+
 v2.1.0 - 2022-08-01t19:28Q
     inline STRREV_POP_INIT into DUTOA
 
