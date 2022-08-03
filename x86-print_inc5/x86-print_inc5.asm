@@ -8,7 +8,7 @@
 ; for unsigned integers.  Thus, the sign bit is assumed to be 0, which
 ; means that SIGN128 will not be needed.  However, since DITOA also
 ; depends on STRREV_POP_INIT, we will also need this.
-; DUTOA also accepts a character buffer in rdi, which we will need to
+; DUTOA also accepts a character buffer in rsi, which we will need to
 ; allocate in the .bss section.
 ;
 ; We also included WRITELN to make printing easier.
@@ -23,6 +23,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; We are required to use these registers for these purposes.
+; We will be using each of the following instructions.
 ;
 ; syscall requires
 ;       rax for the system call to perform
@@ -44,7 +45,7 @@
 ;
 ; idiv
 ;   requires
-;       rax for the lower  quad word (64-bits) of the 128-bit dividend
+;       rax for the  lower quad word (64-bits) of the 128-bit dividend
 ;       rdx for the higher quad word (64-bits) of the 128-bit dividend
 ;   outputs
 ;       at rax, the quotient
@@ -71,6 +72,87 @@
 ;   requires
 ;       rcx for the count down counter
 ;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+; Register->Variable map ;
+;;;;;;;;;;;;;;;;;;;;;;;;;;
+;
+; General-purpose registers:
+;       r8 :
+;           int to_print;   /* the original storage of 5,
+;                            * also used for arithmetic */
+;       r9 :
+;           int tmp_n_digits;   /* temporary location for the digit count */
+;       r10:
+;           enum { base = 10 }; /* the literal 10,
+;                                * used for the base of decimal numbers */
+;       r11:
+;           /* unused because syscall stores rflags there */
+;       r12:
+;           int i_char; /* index of current digit in buffer INT_STR_REP */
+;       r13:
+;           char c; /* the current digit popped from the stack */
+;
+; Special-purpose registers:
+;
+; For rdx:rax, let's say that we have a structure
+;       struct {
+;           int hi_qword;
+;           int lo_qword;
+;       } dividend;
+; then:
+;       rdx:
+;           in DUTOA_DIVIDE_INT_LOOP:
+;               before idiv :
+;                   /* the higher 64-bits of the dividend (rdx:rax),
+;                    * always 0 since we expect a 64-bit unsigned
+;                    * integer from input */
+;                   dividend.hi_qword = 0;
+;               after  idiv :
+;                   /* the quotient of the division of dividend by 10 */
+;                   int i_remainder;
+;               after and/or:
+;                   /* the ASCII digit converted from the remainder */
+;                   char c_remainder;
+;           after DUTOA_DIVIDE_INT_LOOP_END / for WRITELN :
+;               /* the length of the string representation of the
+;                * integer.  Since the purpose is to print this string
+;                * representation, this is also the length of the string
+;                * to write for WRITELN. */
+;               const int N_DIGITS;
+;           after first syscall in WRITELN:
+;               /* stores the length of ENDL (1) */
+;               enum { ENDL_LEN = 1};
+;       rax:
+;           in DUTOA_DIVIDE_INT_LOOP:
+;               before idiv :
+;                   /* the  lower 64-bits of the dividend (rdx:rax) */
+;                   dividend.lo_qword
+;               after  idiv :
+;                   /* the quotient of the division of dividend by 10 */
+;                   int quotient;
+;           for any syscall:
+;               /* the system call to perform */
+;               /* (no C equivalent) */
+;       rdi:
+;           for sys_write:
+;               /* the file descriptor of the stream to which to write */
+;               int fd = FD_STDOUT;
+;           for sys_exit:
+;               /* the exit code to return to shell */
+;               int exit_status;
+;       rsi:
+;           for DUTOA / for WRITELN:
+;               /* the address of the buffer for the string
+;                * representation INT_STR_REP.  Since the purpose is to
+;                * print this string representation, this is also the
+;                * address of the string to write. */
+;               char *INT_STR_REP;
+;           after first syscall in WRITELN:
+;               /* stores the line feed character */
+;               char *ENDL;
+;       rcx:
+;           int k;  /* digit countdown counter in STRREV_POP_LOOP */
 
 ; In this example, we follow this diagram:
 ;
@@ -109,14 +191,12 @@ _start:
     inc  r8                     ; increment the value
     ; convert to an ASCII character string
     mov  rax,r8                 ; copy r8 into rax
-    ; now rdx:rax is ready for DUTOA
-    mov  rdi,INT_STR_REP        ; set rdi to address of the string buffer
+    ; now rax is ready for DUTOA
+    mov  rsi,INT_STR_REP        ; set rsi to address of the string buffer
     call DUTOA                  ; perform Decimal Integer TO Ascii
     ; print the string representation on a line
-    ; we move rdi to rsi now because we will need rdi for FD_STDOUT
-    mov  rsi,rdi                ; move the buffer to rsi for sys_write
-    ; rdx already contains the length of the buffer
-    ; as a result of DUTOA
+    ; rsi already contains the buffer from earlier.
+    ; And as a result of DUTOA, rdx already contains its length.
     call WRITELN
 ; label for end of the program
 END:
@@ -128,85 +208,106 @@ END:
 ; end _start
 
 
-; DUTOA(char *rdi, int *rdx, int rax)
+; DUTOA(out char *rsi, out int rdx, int rax)
 ; Decimal Unsigned integer TO Ascii
 ; converts an unsigned integer into a decimal ASCII string
 ; representation.
 ; This implementation is optimized for decimal unsigned integers.
-; @param
-;   rdi : out char * = string converted from integer
-; @param
-;   rdx : int * = length of string converted from integer
-; @param
-;   rax : int = lower quad word of integer to convert
+;
+; Digits are obtained from the remainder of the repeated division of
+; the unsigned integer by 10.
+;
+; E.g.) Retrieving the digits from 214.
+;   10 ) 214
+;      -----
+;    10 ) 21 R (4)->--+
+;       ----          |
+;     10 ) 2 R (1)->--)--+
+;        ---          |  |
+;          0 R (2)->--)--)--+
+;                     |  |  |
+;                     v  v  v
+; Digits in memory: { 4, 1, 2 }.
+;
+; As a result the digits will be backwards.
+; The plan is to push each digit of the integer onto the stack instead
+; of storing it in the buffer because the stacks is last-in--first-out.
+; Then inline STRREV_POP_INIT from a string reversing procedure to
+; revert the digits to the proper order.
+; This implementation has STRREV_POP_INIT directly after the
+; DUTOA_DIVIDE_INT_LOOP_END.
+;
+; @regist rsi : char * = string converted from integer
+; @regist rdx : out int = length of string converted from integer
+; @regist rax : int = lower quad word of integer to convert
 DUTOA:
-    push rsi            ; backup source index for reverse source
-    call DUTOA_IMPL     ; call the implementation
-    pop  rsi            ; restore source index
-    ret
-; push the digits of the integer onto stack
-; The digits will be backwards.
-; Then inline STRREV_POP_INIT.
-DUTOA_IMPL:
-    push rcx            ; for STRREV: backup counter
-    push r8             ; backup general purpose r8 for digit count
-    push r9             ; backup general purpose r9 for radix and
-                        ; for character in STRREV
-    push r10            ; backup general purpose r10 for sign register
-    mov  r8,0           ; clear digit count
-    mov  r9,10          ; set up radix for division
-; loop while dividing (rdx:rax) by radix (10)
+    mov  r9,0           ; clear digit count
+    mov  r10,10         ; set up deciaml base for division
+; loop while dividing (rdx:rax) by base (10)
 ; and pushing each digit onto the stack
 DUTOA_DIVIDE_INT_LOOP:
     ; Since idiv operates on 128-bit (rdx:rax), rdx must be assigned.
     ; rdx must be reassigned at the beginning of each iteration because
     ; at the end, it will contain the remainder of the last division
     mov  rdx,0                  ; assign 0 because rax is unsigned
-    ; (rax, rdx) = divmod((rdx:rax), 10)
     ; Divide (rdx:rax) by 10.
     ; idiv will store the quotient in rax, and the remainder in rdx.
-    idiv r9                     ; perform the division
-    or   rdx,'0'                ; convert modulo to numeric digit
+    idiv r10                    ; perform the division
+    ; To convert the remainder to a digit, perform an OR operation
+    ; with '0'.  An ASCII character is 7-bits, the higher 3 bits
+    ; categorize the character.
+    ; These categories, their higher 3 bits and the ASCII equivalent of
+    ; the lower bound are:
+    ;   control characters : 000-001    00h (null character)
+    ;   symbols            : 010        20h (space character)
+    ;   numbers            : 011        '0' (zero)
+    ;   uppercase letters  : 100-101    '@' (at symbol)
+    ;   lowercase letters  : 110-111    '`' (backtick)
+    ; Masking for the lower 4 bits (or lower byte) and setting the
+    ; higher 3 bits with an OR with '0' will convert to a digit. 
+    ; Although the masking is unnecessary in this case because the
+    ; digits are all modulo 10 as a remainder of a positive number and
+    ; 10, which is also positive.
+    ;
+    ; convert remainder to numeric digit
+    and  rdx,0fh                ; mask the lower byte
+    or   rdx,'0'                ; OR with '0' sets higher 3 bits to 011
     push rdx                    ; store the digit
-    inc  r8                     ; count digits so far
+    inc  r9                     ; count digits so far
     cmp  rax,0                  ; if (quotient != 0)
     jne  DUTOA_DIVIDE_INT_LOOP  ;       then repeat
 DUTOA_DIVIDE_INT_LOOP_END:
+    mov  rdx,r9     ; store string length (digit count) for sys_write
 ; reverse the string of digits
-DUTOA_CLEANUP:
-    mov  rsi,rdi        ; use the string so far as the source
-    mov  rdx,r8         ; store string length
 STRREV_POP_INIT:
-    mov  rcx,rdx        ; set counter to rdx
-    mov  r10,rdi        ; initialize the sink address
-; pop each character off the stack
+    mov  rcx,rdx        ; set counter to string length (digit count)
+    mov  r12,0          ; index of the current character (digit) in the
+                        ; destination
+    ; Reminder: We skip register r11 because it is used by syscall.
+; pop each character (digit) off the stack
 STRREV_POP_LOOP:
-    pop  r9                 ; pop the character
-    mov  [r10],r9           ; place the character in the sink
-    inc  r10                ; next character in sink
+    ; The loop instruction performs a countdown to 0, which always uses
+    ; rcx as the loop variable.
+    ; So the C equivalent to loop <any label>:
+    ;   for (; (rcx != 0); --rcx) { <...> }
+    ;
+    ; loop invariant:
+    ; At this point in this loop it's always the case that
+    ;       rcx + r12 = rdx.
+    pop  r13                ; pop the next character (digit)
+    mov  rsi[r12], r13      ; place the character (digit) at the index
+    inc  r12                ; next index of character in destination
     loop STRREV_POP_LOOP    ; repeat
 STRREV_POP_LOOP_END:
-    pop  r10            ; restore general purpose
-    pop  r9             ; restore general purpose
-    pop  r8             ; restore general purpose
-    pop  rcx            ; restore counter
     ret
 ; end DUTOA
 
 
-; WRITELN(char *rdi, int rdx)
+; WRITELN(char *rsi, int rdx)
 ; Writes the given string followed by a newline character.
-; @param
-;   rsi : char *= string to write, followed by a newline
-; @param
-;   rdx : int = length of the string rsi
+; @regist rsi : char * = string to write on remainder of current line
+; @regist rdx : int = length of the string `rsi`
 WRITELN:
-    ; set up
-    push rcx            ; guard from write changing rcx
-    push rsi            ; backup the string to print
-    push rdx            ; backup the size of the string
-    push rax            ; backup to hold the system call
-    push rdi            ; backup to hold the file descriptor
     ; C equivalent: write(FD_STDOUT, rsi, rdx);
     ; print the string in rsi
     mov  rax,sys_write  ; system call to perform
@@ -216,14 +317,8 @@ WRITELN:
     ; print the newline
     mov  rax,sys_write  ; system call to perform
     mov  rsi,ENDL       ; newline to print
-    mov  rdx,1          ; 1 character to print
+    mov  rdx,1          ; 1 character (newline) to print
     syscall     ; execute the system call
-    ; clean up
-    pop  rdi            ; restore rdi
-    pop  rax            ; restore rax
-    pop  rdx            ; restore the size of the string
-    pop  rsi            ; restore the string to print
-    pop  rcx            ; restore rcx
     ret
 ; end WRITELN
 
@@ -245,7 +340,7 @@ EXIT_SUCCESS:   equ 0
 ;   newline character
 ENDL:           db 0ah
 ;   character length of a decimal integer (20 digits + sign)
-INT_LEN:        equ 21
+INT_LEN:        equ (20 + 1)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
