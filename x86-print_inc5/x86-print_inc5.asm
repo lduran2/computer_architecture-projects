@@ -181,11 +181,15 @@
 section .text
     ; export the symbol _start
     global _start
+    ; Reminder that _start is the symbol that the shell expects to go
+    ; to for the beginning of the program, and it must have global
+    ; access to allow the shell access to it.
+    ; myCompiler.io will give a warning if that is not the case.
 
 
 ; Beginning of the program.
 _start:
-    ; mutate the register
+    ; change the value of the register to print, r8
     mov  r8,5                   ; store the value 5 in the register
     inc  r8                     ; increment the value
     ; convert to an ASCII character string
@@ -201,6 +205,7 @@ _start:
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
     ; exit without error
+    ; the following 3 lines end the program
     mov  rax,sys_exit       ; system call to perform
     mov  rdi,EXIT_SUCCESS   ; exit with no errors
     syscall     ; execute the system call
@@ -240,7 +245,8 @@ END:
 ; @regist rdx : out int = length of string converted from integer
 ; @regist rax : int = lower quad word of integer to convert
 DUTOA:
-    mov  r9,0           ; clear digit count
+    mov  r9,0           ; initialize digit count
+                        ; the # of digits extracted from the integer
     mov  r10,10         ; set up deciaml base for division
 ; loop while dividing (rdx:rax) by base (10)
 ; and pushing each digit onto the stack
@@ -271,7 +277,7 @@ DUTOA_DIVIDE_INT_LOOP:
     ; convert remainder to numeric digit
     and  rdx,0fh                ; mask the lower byte
     or   rdx,'0'                ; OR with '0' sets higher 3 bits to 011
-    push rdx                    ; store the digit
+    push rdx                    ; store the digit at the top of the stack
     inc  r9                     ; count digits so far
     cmp  rax,0                  ; if (quotient != 0)
     jne  DUTOA_DIVIDE_INT_LOOP  ;       then repeat
@@ -293,10 +299,15 @@ STRREV_POP_LOOP:
     ; loop invariant:
     ; At this point in this loop it's always the case that
     ;       rcx + r12 = rdx.
-    pop  r13                ; pop the next character (digit)
-    mov  rsi[r12], r13      ; place the character (digit) at the index
+    pop  r13                ; pop the next character (digit) from the stack
+                            ; and store it in register r13
+    mov  rsi[r12], r13      ; place the character (digit) at the index.
+    ; This rsi[r12] syntax is very similar to a C array.
+    ; An alternative syntax is [rsi+r12], used in DITOA, which treats
+    ; the operand of the brackets [] as a pointer. 
+    ; The C equivalent would be *(rsi+r12).
     inc  r12                ; next index of character in destination
-    loop STRREV_POP_LOOP    ; repeat
+    loop STRREV_POP_LOOP    ; repeat (rdx) times using loop rcx as variable
 STRREV_POP_LOOP_END:
     ret
 ; end DUTOA
@@ -337,14 +348,35 @@ EXIT_SUCCESS:   equ 0
 
 ; Constants:
 ;   newline character
-ENDL:           db 0ah
+ENDL:           db 0ah          ; C equivalent: char *ENDL = '\n';
 ;   character length of a decimal integer (20 digits + sign)
 INT_LEN:        equ (20 + 1)
+
+; INT_LEN will be used as the length to allocate the buffer
+; INT_STR_REP.
+;
+; Reminder that INT_LEN above is like a C language macro.  In C,
+; macros are expanded in the preprocessing step of the compilation
+; process;  in Assembly, it is a similar process, but the label
+; (e.g., INT_LEN) instead becomes a synonym for the given value
+; (e.g., (20 + 1)) in the symbol table used to assemble the program.
+; Thus, it would not be possible to wait until runtime to define a size
+; INT_LEN for INT_STR_REP using a register.  By then it would be too
+; late!  So instead, we give INT_LEN a maximum value (20 digits + sign)
+; that we can expect for a 64-bit number.
+;
+; Also reminder that equ (equations) like INT_LEN do not take up space
+; in memory during runtime.
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for string representations of integers
-INT_STR_REP:    resb INT_LEN
+INT_STR_REP:    resb INT_LEN    ; C equivalent: char INT_STR_REP[INT_LEN];
+
+; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
+; an array of bytes having the given value, whereas resb (reserve
+; bytes, e.g., INT_STR_REP) creates an array of the given size at the label.
+;
 
