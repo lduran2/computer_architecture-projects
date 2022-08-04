@@ -158,20 +158,20 @@
 
 ; In this example, to convert and print the integer, we follow this diagram:
 ;
-;                                                            +---------+
-;                                +-------------+             |         |
-;                                |             |             |         |
-;                                |  +-------+  |             |         |
-;                                |  |       |  |             |         |
-; INT_STR_REP --------> rsi -----+->|       | -+-> rsi ----->|         |
-;  buffer                           |       |                | WRITELN |
-;                                   |       |                |         |
-;            +-----+                | DUTOA |                |         |
-; (5)-> r8 ->| inc | -> r8 -> rax ->|       |                |         |
-;            +-----+     ìnteger    |       |                |         |
-;                        to print   |       | ---> rdx ----->|         |
-;                        (64-bit)   |       |       length   |         |
-;                                   +-------+                +---------+
+;                                                                  +---------+
+;                                      +-------------+             |         |
+;                                      |             |             |         |
+;                                      ^  +-------+  |             |         |
+;                                      |  |       |  |             |         |
+; INT_STR_REP --------> rsi -----------+->|       | -+-> rsi ----->|         |
+;  buffer                                 |       |                | WRITELN |
+;                                         |       |                |         |
+;            +-----+                      | DUTOA |                |         |
+; (5)-> r8 ->| inc | -> r8 -------> rax ->|       |                |         |
+;            +-----+     ìnteger          |       |                |         |
+;                        to print         |       | ---> rdx ----->|         |
+;                        (64-bit)         |       |       length   |         |
+;                                         +-------+                +---------+
 ;
 ;         Figure 1. Converting and printing an unsigned integer.
 ; 
