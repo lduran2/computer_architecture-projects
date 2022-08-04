@@ -12,6 +12,7 @@
 ; allocate in the .bss section.
 ;
 ; We also included WRITELN to make printing easier.
+;
 
 ; Since 16 registers are available, different system calls and procedures
 ; will expect a value to be at a specific register before the call.
@@ -153,28 +154,26 @@
 ;               char *ENDL;
 ;       rcx:
 ;           int k;  /* digit countdown counter in STRREV_POP_LOOP */
-
-; In this example, we follow this diagram:
 ;
-;                                                                                        +---------+
-; sys_write --------------------------------------------------------------> rax -------->|         |
-;  system call to perform                                                                |         |
-;                                                                                        |         |
-; FD_STDOUT --------------------------------------------------------------> rdi -------->|         |
-;  file descriptor                                                                       |         |
-;                                                         +-------------+                |         |
-;                                                         |             |                |         |
-;                                                         |  +-------+  |                | syscall |
-;                                                         |  |       |  |                |         |
-; INT_STR_REP ----------------------------------> rdi ----+->|       | -+-> rdi -> rsi ->|         |
-;  buffer                          +---------+               |       |                   |         |
-;                                  |         |               |       |                   |         |
-;           +-----+                |         |               | DUTOA |                   |         |
-; 5 -> r8 ->| inc | -> r8 -> rax ->| SIGN128 | -> rdx:rax -->|       |                   |         |
-;           +-----+     ìnteger    |         |     integer   |       |                   |         |
-;                       to print   |         |     to print  |       | ---> rdx -------->|         |
-;                       (64-bit)   |         |     (128-bit) |       |       length      |         |
-;                                  +---------+               +-------+                   +---------+
+
+; In this example, to convert and print the integer, we follow this diagram:
+;
+;                                                            +---------+
+;                                +-------------+             |         |
+;                                |             |             |         |
+;                                |  +-------+  |             |         |
+;                                |  |       |  |             |         |
+; INT_STR_REP --------> rsi -----+->|       | -+-> rsi ----->|         |
+;  buffer                           |       |                | WRITELN |
+;                                   |       |                |         |
+;            +-----+                | DUTOA |                |         |
+; (5)-> r8 ->| inc | -> r8 -> rax ->|       |                |         |
+;            +-----+     ìnteger    |       |                |         |
+;                        to print   |       | ---> rdx ----->|         |
+;                        (64-bit)   |       |       length   |         |
+;                                   +-------+                +---------+
+;
+;         Figure 1. Converting and printing an unsigned integer.
 ; 
 
 
