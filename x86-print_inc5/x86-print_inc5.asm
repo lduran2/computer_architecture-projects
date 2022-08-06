@@ -261,8 +261,8 @@ DUTOA_DIVIDE_INT_LOOP:
     ; idiv will store the quotient in rax, and the remainder in rdx.
     idiv r10                    ; perform the division
     ; The digits in ASCII are in order and represented by the numbers
-    ; 30h ('0') to 39h ('9').  Thus, adding '0' to the r8 will convert
-    ; to an ASCII character.
+    ; 30h ('0') to 39h ('9').  Thus, adding '0' to the remainder will
+    ; convert to an ASCII character.
     add  rdx,'0'                ; convert remainder to ASCII numeric digit
     push rdx                    ; store the digit at the top of the stack
     inc  r9                     ; count digits so far
