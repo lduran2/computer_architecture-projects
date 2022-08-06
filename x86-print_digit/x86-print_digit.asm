@@ -120,7 +120,7 @@ _start:
     ; 30h ('0') to 39h ('9').  Thus, adding '0' to the r8 will convert
     ; to an ASCII character.
     add  r8,'0'                 ; convert to an ASCII character string
-    mov  [rsi],r8               ; place the digit in the buffer
+    mov  rsi[0],r8              ; place the digit in the buffer
     mov  rdx,1                  ; print 1 digit (1 character)
     ; print the string representation on a line
     ; rsi already contains the buffer from earlier.
