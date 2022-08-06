@@ -19,6 +19,9 @@
 ;
 ; syscall requires
 ;       rax for the system call to perform
+;   outputs
+;       at rcx, copies the instruction pointer rip
+;       at r11, copies the flag register rflags
 ;
 ; sys_write
 ;   requires
@@ -26,9 +29,7 @@
 ;       rdi for the file descriptor of the stream to which to write
 ;       rsi for the address of character 0 of the string to write
 ;       rdx for the length of the string to write
-;   outputs
-;       at rcx, copies the instruction pointer rip
-;       at r11, copies the flag register rflags
+;   see syscall
 ;
 ; sys_exit
 ;   requires
@@ -180,10 +181,11 @@ ENDL:           db 0ah  ; C equivalent: char const *const ENDL = "\n";
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for string representations of integers
-DIGIT_CBUF:    resb 1           ; C equivalent: char digit_cbuf[1u];
+DIGIT_CBUF:     resb 1          ; C equivalent: char digit_cbuf[1u];
 
 ; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
 ; an array of bytes having the given value, whereas resb (reserve
-; bytes, e.g., DIGIT_CBUF) creates an array of the given size at the label.
+; bytes, e.g., DIGIT_CBUF) creates an array of the given size at the
+; label.
 ;
 
