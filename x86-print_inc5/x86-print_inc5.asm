@@ -299,17 +299,17 @@ STRREV_POP_LOOP_END:
 ; end DUTOA
 
 
-; WRITELN(char const *rsi, int rdx)
+; WRITELN(char const *rsi, size_t rdx)
 ; Writes the given string followed by a newline character.
 ; @regist rsi : char const * = string to write on remainder of current line
-; @regist rdx : int = length of the string `rsi`
+; @regist rdx : size_t = length of the string `rsi`
 WRITELN:
     ; C equivalent: write(FD_STDOUT, rsi, rdx);
     ; print the string in rsi
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
     syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, ENDL, 1);
+    ; C equivalent: write(FD_STDOUT, ENDL, 1u);
     ; print the newline
     mov  rax,sys_write  ; system call to perform
     mov  rsi,ENDL       ; newline to print
