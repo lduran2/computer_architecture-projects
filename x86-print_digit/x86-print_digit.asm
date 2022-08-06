@@ -74,7 +74,7 @@
 ;               enum { N_DIGITS = 1 };
 ;           after first syscall in WRITELN:
 ;               /* stores the length of ENDL (1) */
-;               enum { ENDL_LEN = 1};
+;               enum { ENDL_LEN = 1 };
 ;       rax:
 ;           for any syscall:
 ;               /* the system call to perform */
@@ -95,7 +95,7 @@
 ;               char *digit_cbuf;
 ;           after first syscall in WRITELN:
 ;               /* stores the line feed character */
-;               char const *const ENDL;
+;               char const *const ENDL = "\n";
 ;
 
 
@@ -137,7 +137,7 @@ END:
 ; end _start
 
 
-; WRITELN(char const *rsi, int rdx)
+; WRITELN(char const *rsi, size_t rdx)
 ; Writes the given string followed by a newline character.
 ; @regist rsi : char const * = string to write on remainder of current
 ;       line
@@ -148,7 +148,7 @@ WRITELN:
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
     syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, ENDL, 1);
+    ; C equivalent: write(FD_STDOUT, ENDL, 1u);
     ; print the newline
     mov  rax,sys_write  ; system call to perform
     mov  rsi,ENDL       ; newline to print
@@ -180,7 +180,7 @@ ENDL:           db 0ah  ; C equivalent: char const *const ENDL = "\n";
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for string representations of integers
-DIGIT_CBUF:    resb 1           ; C equivalent: char digit_cbuf[1L];
+DIGIT_CBUF:    resb 1           ; C equivalent: char digit_cbuf[1u];
 
 ; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
 ; an array of bytes having the given value, whereas resb (reserve
