@@ -1,0 +1,11 @@
+v3.0.2 - 2022-08-05t22:15Q
+    changes from x86-print_inc5
+
+v3.0.1 - 2022-08-05t21:13Q
+    consistent to array notation for rsi
+
+v3.0.0 - 2022-08-05t21:07Q
+    simplified to print 1 digit
+
+v2.3.2 - 2022-08-03t22:35Q
+    copied from x86-print_inc5
