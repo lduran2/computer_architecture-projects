@@ -83,14 +83,15 @@
 ;           int to_print;   /* the original storage of 5,
 ;                            * also used for arithmetic */
 ;       r9 :
-;           int tmp_n_digits;   /* temporary location for the digit count */
+;           size_t tmp_n_digits;    /* temporary location for digit count */
 ;       r10:
 ;           enum { base = 10 }; /* the literal 10,
 ;                                * used for the base of decimal numbers */
 ;       r11:
 ;           /* unused because syscall stores rflags there */
 ;       r12:
-;           int i_char; /* index of current digit in buffer INT_STR_REP */
+;           size_t i_char;  /* index of current digit
+;                            * in buffer INT_STR_REP */
 ;       r13:
 ;           char c; /* the current digit popped from the stack */
 ;
@@ -120,10 +121,10 @@
 ;                * integer.  Since the purpose is to print this string
 ;                * representation, this is also the length of the string
 ;                * to write for WRITELN. */
-;               const int N_DIGITS;
+;               size_t const N_DIGITS;
 ;           after first syscall in WRITELN:
 ;               /* stores the length of ENDL (1) */
-;               enum { ENDL_LEN = 1};
+;               enum { ENDL_LEN = 1 };
 ;       rax:
 ;           in DUTOA_DIVIDE_INT_LOOP:
 ;               before idiv :
@@ -148,12 +149,12 @@
 ;                * representation INT_STR_REP.  Since the purpose is to
 ;                * print this string representation, this is also the
 ;                * address of the string to write. */
-;               char *INT_STR_REP;
+;               char *int_str_rep;
 ;           after first syscall in WRITELN:
 ;               /* stores the line feed character */
-;               char *ENDL;
+;               char const *const ENDL = "\n";
 ;       rcx:
-;           int k;  /* digit countdown counter in STRREV_POP_LOOP */
+;           size_t k;  /* digit countdown counter in STRREV_POP_LOOP */
 ;
 
 ; In this example, to convert and print the integer, we follow this diagram:
@@ -313,9 +314,9 @@ STRREV_POP_LOOP_END:
 ; end DUTOA
 
 
-; WRITELN(char *rsi, int rdx)
+; WRITELN(char const *rsi, int rdx)
 ; Writes the given string followed by a newline character.
-; @regist rsi : char * = string to write on remainder of current line
+; @regist rsi : char const * = string to write on remainder of current line
 ; @regist rdx : int = length of the string `rsi`
 WRITELN:
     ; C equivalent: write(FD_STDOUT, rsi, rdx);
@@ -348,7 +349,7 @@ EXIT_SUCCESS:   equ 0
 
 ; Constants:
 ;   newline character
-ENDL:           db 0ah          ; C equivalent: char *ENDL = '\n';
+ENDL:           db 0ah  ; C equivalent: char const *const ENDL = "\n";
 ;   character length of a decimal integer (20 digits + sign)
 INT_LEN:        equ (20 + 1)
 
@@ -373,7 +374,8 @@ INT_LEN:        equ (20 + 1)
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for string representations of integers
-INT_STR_REP:    resb INT_LEN    ; C equivalent: char INT_STR_REP[INT_LEN];
+INT_STR_REP:    resb INT_LEN    ; C equivalent:
+                                ; char int_str_rep[(size_t)INT_LEN];
 
 ; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
 ; an array of bytes having the given value, whereas resb (reserve
