@@ -28,6 +28,9 @@
 ;
 ; syscall requires
 ;       rax for the system call to perform
+;   outputs
+;       at rcx, copies the instruction pointer rip
+;       at r11, copies the flag register rflags
 ;
 ; sys_write
 ;   requires
@@ -35,9 +38,7 @@
 ;       rdi for the file descriptor of the stream to which to write
 ;       rsi for the address of character 0 of the string to write
 ;       rdx for the length of the string to write
-;   outputs
-;       at rcx, copies the instruction pointer rip
-;       at r11, copies the flag register rflags
+;   see syscall
 ;
 ; sys_exit
 ;   requires
