@@ -83,14 +83,15 @@
 ;           int to_print;   /* the original storage of 5,
 ;                            * also used for arithmetic */
 ;       r9 :
-;           int tmp_n_digits;   /* temporary location for the digit count */
+;           size_t tmp_n_digits;    /* temporary location for digit count */
 ;       r10:
 ;           enum { base = 10 }; /* the literal 10,
 ;                                * used for the base of decimal numbers */
 ;       r11:
 ;           /* unused because syscall stores rflags there */
 ;       r12:
-;           int i_char; /* index of current digit in buffer INT_STR_REP */
+;           size_t i_char;  /* index of current digit
+;                            * in buffer INT_STR_REP */
 ;       r13:
 ;           char c; /* the current digit popped from the stack */
 ;
@@ -120,10 +121,10 @@
 ;                * integer.  Since the purpose is to print this string
 ;                * representation, this is also the length of the string
 ;                * to write for WRITELN. */
-;               const int N_DIGITS;
+;               size_t const N_DIGITS;
 ;           after first syscall in WRITELN:
 ;               /* stores the length of ENDL (1) */
-;               enum { ENDL_LEN = 1};
+;               enum { ENDL_LEN = 1 };
 ;       rax:
 ;           in DUTOA_DIVIDE_INT_LOOP:
 ;               before idiv :
@@ -148,12 +149,12 @@
 ;                * representation INT_STR_REP.  Since the purpose is to
 ;                * print this string representation, this is also the
 ;                * address of the string to write. */
-;               char *INT_STR_REP;
+;               char *int_str_rep;
 ;           after first syscall in WRITELN:
 ;               /* stores the line feed character */
-;               char *ENDL;
+;               char const *const ENDL = "\n";
 ;       rcx:
-;           int k;  /* digit countdown counter in STRREV_POP_LOOP */
+;           size_t k;  /* digit countdown counter in STRREV_POP_LOOP */
 ;
 
 ; In this example, to convert and print the integer, we follow this diagram:
@@ -258,25 +259,10 @@ DUTOA_DIVIDE_INT_LOOP:
     ; Divide (rdx:rax) by 10.
     ; idiv will store the quotient in rax, and the remainder in rdx.
     idiv r10                    ; perform the division
-    ; To convert the remainder to a digit, perform an OR operation
-    ; with '0'.  An ASCII character is 7-bits, the higher 3 bits
-    ; categorize the character.
-    ; These categories, their higher 3 bits and the ASCII equivalent of
-    ; the lower bound are:
-    ;   control characters : 000-001    00h (null character)
-    ;   symbols            : 010        20h (space character)
-    ;   numbers            : 011        '0' (zero)
-    ;   uppercase letters  : 100-101    '@' (at symbol)
-    ;   lowercase letters  : 110-111    '`' (backtick)
-    ; Masking for the lower 4 bits (or lower byte) and setting the
-    ; higher 3 bits with an OR with '0' will convert to a digit. 
-    ; Although the masking is unnecessary in this case because the
-    ; digits are all modulo 10 as a remainder of a positive number and
-    ; 10, which is also positive.
-    ;
-    ; convert remainder to numeric digit
-    and  rdx,0fh                ; mask the lower byte
-    or   rdx,'0'                ; OR with '0' sets higher 3 bits to 011
+    ; The digits in ASCII are in order and represented by the numbers
+    ; 30h ('0') to 39h ('9').  Thus, adding '0' to the r8 will convert
+    ; to an ASCII character.
+    add  rdx,'0'                ; convert remainder to ASCII numeric digit
     push rdx                    ; store the digit at the top of the stack
     inc  r9                     ; count digits so far
     cmp  rax,0                  ; if (quotient != 0)
@@ -313,17 +299,17 @@ STRREV_POP_LOOP_END:
 ; end DUTOA
 
 
-; WRITELN(char *rsi, int rdx)
+; WRITELN(char const *rsi, size_t rdx)
 ; Writes the given string followed by a newline character.
-; @regist rsi : char * = string to write on remainder of current line
-; @regist rdx : int = length of the string `rsi`
+; @regist rsi : char const * = string to write on remainder of current line
+; @regist rdx : size_t = length of the string `rsi`
 WRITELN:
     ; C equivalent: write(FD_STDOUT, rsi, rdx);
     ; print the string in rsi
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
     syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, ENDL, 1);
+    ; C equivalent: write(FD_STDOUT, ENDL, 1u);
     ; print the newline
     mov  rax,sys_write  ; system call to perform
     mov  rsi,ENDL       ; newline to print
@@ -348,7 +334,7 @@ EXIT_SUCCESS:   equ 0
 
 ; Constants:
 ;   newline character
-ENDL:           db 0ah          ; C equivalent: char *ENDL = '\n';
+ENDL:           db 0ah  ; C equivalent: char const *const ENDL = "\n";
 ;   character length of a decimal integer (20 digits + sign)
 INT_LEN:        equ (20 + 1)
 
@@ -373,7 +359,8 @@ INT_LEN:        equ (20 + 1)
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for string representations of integers
-INT_STR_REP:    resb INT_LEN    ; C equivalent: char INT_STR_REP[INT_LEN];
+INT_STR_REP:    resb INT_LEN    ; C equivalent:
+                                ; char int_str_rep[(size_t)INT_LEN];
 
 ; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
 ; an array of bytes having the given value, whereas resb (reserve
