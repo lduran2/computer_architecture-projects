@@ -259,25 +259,10 @@ DUTOA_DIVIDE_INT_LOOP:
     ; Divide (rdx:rax) by 10.
     ; idiv will store the quotient in rax, and the remainder in rdx.
     idiv r10                    ; perform the division
-    ; To convert the remainder to a digit, perform an OR operation
-    ; with '0'.  An ASCII character is 7-bits, the higher 3 bits
-    ; categorize the character.
-    ; These categories, their higher 3 bits and the ASCII equivalent of
-    ; the lower bound are:
-    ;   control characters : 000-001    00h (null character)
-    ;   symbols            : 010        20h (space character)
-    ;   numbers            : 011        '0' (zero)
-    ;   uppercase letters  : 100-101    '@' (at symbol)
-    ;   lowercase letters  : 110-111    '`' (backtick)
-    ; Masking for the lower 4 bits (or lower byte) and setting the
-    ; higher 3 bits with an OR with '0' will convert to a digit. 
-    ; Although the masking is unnecessary in this case because the
-    ; digits are all modulo 10 as a remainder of a positive number and
-    ; 10, which is also positive.
-    ;
-    ; convert remainder to numeric digit
-    and  rdx,0fh                ; mask the lower byte
-    or   rdx,'0'                ; OR with '0' sets higher 3 bits to 011
+    ; The digits in ASCII are in order and represented by the numbers
+    ; 30h ('0') to 39h ('9').  Thus, adding '0' to the r8 will convert
+    ; to an ASCII character.
+    add  rdx,'0'                ; convert remainder to ASCII numeric digit
     push rdx                    ; store the digit at the top of the stack
     inc  r9                     ; count digits so far
     cmp  rax,0                  ; if (quotient != 0)

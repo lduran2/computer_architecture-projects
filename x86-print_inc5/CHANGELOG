@@ -1,3 +1,6 @@
+v2.4.1 - 2022-08-05t21:45Q
+    using ADD to convert remainder->digit
+
 v2.4.0 - 2022-08-05t21:31Q
     updated documentation to match x86-print_digit
 
