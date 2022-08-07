@@ -10,6 +10,12 @@ and a C equivalent program.
 ## [x86 Calculator][x86-calc] (in x86 Assembly)
 
 Addition calculator program.
+This calculator
+1. reads in user input,
+2. converts it from ASCII to an integer,
+3. performs the addition operation,
+4. converts the result from an integer to ASCII, and
+5. prints the resulting string.
 This can be modified to perform other operations.
 
 [hw]: ./helloworld#readme
