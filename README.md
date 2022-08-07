@@ -13,7 +13,15 @@ Demonstration that compares
 all defines (`db`, `dw`, `dd`, `dq`, `dt`) and equate (`equ`)
 by showing the size in memory that each occupies.
 
-## [Print increase from 5][x86-pi5] (in x86 Assembly)
+## Print increment programs
+
+### [Print digit][x86-pdg]
+
+Stores `5` in a register, increments the value and prints the result.
+This implementation shows how to print a single digit by adding `'0'`
+to the result of the increment operation.
+
+### [Print increment from 5][x86-pi5] (in x86 Assembly)
 
 Stores `5` in a register, increments the value and prints the result.
 This implementation uses the `DUTOA` procedure
@@ -43,3 +51,4 @@ This can be modified to perform other operations.
 [x86-calc]: ./x86-calc#readme
 [x86-pi5]: ./x86-print_inc5#readme
 [x86-eqvd]: ./x86-equ_vs_dx#readme
+[x86-pdg]: ./x86-print_digit#readme
