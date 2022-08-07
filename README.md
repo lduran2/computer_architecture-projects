@@ -15,7 +15,11 @@ This implementation uses the `DUTOA` procedure
 modified from the `DITOA`
 (**D**ecimal **I**nteger **to A**SCII),
 that we implemented in [x86 Calculator][x86-calc].
-As a result this program can handle any number of digits for input.
+As a result this program can handle
+a full 64-bit unsigned integer of
+up to 20 digits
+`[0,  9,223,372,036,854,775,808]`
+for input.
 
 ## [x86 Calculator][x86-calc] (in x86 Assembly)
 
