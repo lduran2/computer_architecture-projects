@@ -7,6 +7,12 @@ Example program for printing a greeting.
 Included are the original in x86-64 Assembly
 and a C equivalent program.
 
+## [x86 `equ` vs `d*` instructions][x86-eqvd]
+
+Demonstration that compares
+all defines (`db`, `dw`, `dd`, `dq`, `dt`) and equate (`equ`)
+by showing the size in memory that each occupies.
+
 ## [Print increase from 5][x86-pi5] (in x86 Assembly)
 
 Stores `5` in a register, increments the value and prints the result.
@@ -34,5 +40,6 @@ This calculator
 This can be modified to perform other operations.
 
 [hw]: ./helloworld#readme
-[x86-pi5]: ./x86-print_inc5#readme
 [x86-calc]: ./x86-calc#readme
+[x86-pi5]: ./x86-print_inc5#readme
+[x86-eqvd]: ./x86-equ_vs_dx#readme
