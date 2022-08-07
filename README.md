@@ -4,13 +4,17 @@
 ## [Hello World][hw] (in x86 Assembly) (in C)
 
 Example program for printing a greeting.
-There is the original in x86-64 Assembly,
+Included are the original in x86-64 Assembly
 and a C equivalent program.
 
 ## [Print increase from 5][x86-pi5] (in x86 Assembly)
 
-Stores 5 in a register, increments the value and prints the result.
-This implementation uses the DUTOA procedure that we implemented.
+Stores `5` in a register, increments the value and prints the result.
+This implementation uses the `DUTOA` procedure
+(**D**ecimal **U**nsigned integer **to A**SCII),
+modified from the `DITOA`
+(**D**ecimal **I**nteger **to A**SCII),
+that we implemented in [x86 Calculator][x86-calc].
 As a result this program can handle any number of digits for input.
 
 ## [x86 Calculator][x86-calc] (in x86 Assembly)
