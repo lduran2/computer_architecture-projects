@@ -1,5 +1,6 @@
 # Projects in Computer Architecture
 ###### by Leomar Durán
+* Canonical link: <https://github.com/lduran2/computer_architecture-projects#readme>
 
 ## [Hello World][hw] (in x86 Assembly) (in C)
 
@@ -20,6 +21,13 @@ by showing the size in memory that each occupies.
 Stores `5` in a register, increments the value and prints the result.
 This implementation shows how to print a single digit by adding `'0'`
 to the result of the increment operation.
+
+### [Input digit, then increment][x86-idg]
+
+Stores
+a single digit
+read from standard input in a register,
+increments the value and prints the result.
 
 ### [Print increment from 5][x86-pi5] (in x86 Assembly)
 
@@ -52,3 +60,4 @@ This can be modified to perform other operations.
 [x86-pi5]: ./x86-print_inc5#readme
 [x86-eqvd]: ./x86-equ_vs_dx#readme
 [x86-pdg]: ./x86-print_digit#readme
+[x86-idg]: ./x86-input_digit#readme
