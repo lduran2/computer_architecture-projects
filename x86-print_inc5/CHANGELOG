@@ -1,0 +1,32 @@
+v2.4.1 - 2022-08-05t21:45Q
+    using ADD to convert remainder->digit
+
+v2.4.0 - 2022-08-05t21:31Q
+    updated documentation to match x86-print_digit
+
+v2.3.2 - 2022-08-03t22:35Q
+    added notes from revisions
+
+v2.3.1 - 2022-08-03t20:13Q
+    updated convert/print diagram
+
+v2.3.0 - 2022-08-03t19:16Q
+    documented Register->Variable map
+
+v2.2.0 - 2022-08-02t03:02Q
+    documented Required register use
+
+v2.1.1 - 2022-08-01t20:00Q
+    using WRITELN for writing
+
+v2.1.0 - 2022-08-01t19:28Q
+    inline STRREV_POP_INIT into DUTOA
+
+v2.0.1 - 2022-08-01t19:08Q
+    replaced `test *,-1` with `cmp *,0`
+
+v2.0.0 - 2022-08-01t19:06Q
+    optimized DITOA for unsigned integers (as DUTOA)
+
+v1.0.0 - 2022-07-17t02:11Q
+    implemented, documented

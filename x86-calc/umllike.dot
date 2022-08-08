@@ -1,0 +1,174 @@
+/* Note that this is not exactly a UML diagram.
+   Rather, it treats functions as classes
+   with their parameters as public fields.
+ */
+
+digraph x86calc {
+    /* nodes */
+    node [
+        shape = "record",
+        fontname = "Verdana,DejaVu Sans,Bitstream Vera Sans"
+    ];
+
+    _start [
+        label = "{\N|}"
+    ];
+
+    END [
+        label = "{\N|}"
+    ];
+
+    PROMPT_AND_GET_OPERANDS [
+        label = "{\N|+ rsi : char **\l+ rcx : int *\l+ rdx : int *\l+ rax : int *\l}"
+    ];
+
+    TO_STRING_AND_PRINT [
+        label = "{\N|+ rcx : int\l+ rdx : int\l+ rax : int\l}"
+    ];
+
+    PROMPT_INT_INPUT [
+        label = "{\N|+ rdi : int **\l+ rsi : char *\l+ rdx : int\l+ rcx : int\l+ rax : int *\l}"
+    ];
+
+    WRITELN [
+        label = "{\N|+ rdi : char *\l+ rdx : int\l}"
+    ];
+
+    PROMPT_INPUT [
+        label = "{\N|+ rdi : char *\l+ rsi : char *\l+ rdx : int\l+ rcx : int\l}"
+    ];
+
+    SEEKNE [
+        label = "{\N|+ rdi : char **\l+ rax : void (*)(char rsi)\l}"
+    ];
+
+    SEEKNE_rax [
+        label = "{&laquo;pointer&raquo;\nSEEKNE::rax|+ rsi : char\l}"
+    ];
+
+    ATODI [
+        label = "{\N|+ rdi : int *\l+ rdx : int\l+ rax : char *\l}"
+    ];
+
+    ATODI_SEEK [
+        label = "{\N|+ rdi : int *\l+ rdx : int *\l+ rax : char **\l}"
+    ];
+
+    ISSPACE [
+        label = "{\N|+ rsi : char\l}"
+    ];
+
+    DITOA [
+        label = "{\N|+ rdi : char *\l+ rdx : int *\l+ rax : int\l}"
+    ];
+ 
+    DITOA_IMPL [
+        label = "{\N|+ rdi : char *\l+ rdx : int *\l+ rax : int\l}"
+    ];
+
+    SIGN128 [
+        label = "{\N|+ rdx : int *\l+ rax : int\l}"
+    ];
+
+    STRREV [
+        label = "{\N|+ rdi : char *\l+ rsi : char *\l+ rdx : int\l}"
+    ];
+
+    STRREV_POP_INIT [
+        label = "{\N|+ rdi : char *\l+ rdx : int\l}"
+    ];
+ 
+    EXIT_END_OF_INPUT [
+        label = "{\N|}"
+    ];
+
+    sys_exit [
+        shape = "doublecircle"
+    ];
+
+    /* edges */
+    _start -> PROMPT_AND_GET_OPERANDS [
+        style="dashed", arrowhead="vee"
+    ];
+    _start -> TO_STRING_AND_PRINT [
+        style="dashed", arrowhead="vee"
+    ];
+    _start -> END [
+        dir="back", arrowtail="odiamond"
+    ];
+
+    END -> sys_exit [
+        style="dashed", arrowhead="vee"
+    ];
+
+    PROMPT_AND_GET_OPERANDS -> PROMPT_INT_INPUT [
+        style="dashed", arrowhead="vee",
+        headlabel="2 "
+    ];
+    PROMPT_AND_GET_OPERANDS -> WRITELN [
+        style="dashed", arrowhead="vee",
+        headlabel="2   "
+    ];
+
+    TO_STRING_AND_PRINT -> SIGN128 [
+        style="dashed", arrowhead="vee"
+    ];
+    TO_STRING_AND_PRINT -> DITOA [
+        style="dashed", arrowhead="vee"
+    ];
+    TO_STRING_AND_PRINT -> WRITELN [
+        style="dashed", arrowhead="vee"
+    ];
+
+    PROMPT_INT_INPUT -> PROMPT_INPUT [
+        style="dashed", arrowhead="vee"
+    ];
+    PROMPT_INT_INPUT -> ISSPACE [
+        style="dashed", arrowhead="vee"
+    ];
+    PROMPT_INT_INPUT -> SEEKNE [
+        style="dashed", arrowhead="vee"
+    ];
+    PROMPT_INT_INPUT -> EXIT_END_OF_INPUT [
+        dir="back", arrowtail="odiamond"
+    ];
+    PROMPT_INT_INPUT -> ATODI_SEEK [
+        style="dashed", arrowhead="vee"
+    ];
+
+    EXIT_END_OF_INPUT -> sys_exit [
+        style="dashed", arrowhead="vee"
+    ];
+
+    SEEKNE -> SEEKNE_rax [
+        style="dashed", arrowhead="vee"
+    ];
+
+    ISSPACE -> SEEKNE_rax [
+        style="dashed", arrowhead="empty"
+    ];
+
+    ATODI -> ATODI_SEEK [
+        style="dashed", arrowhead="vee"
+    ];
+
+    ATODI_SEEK -> ISSPACE [
+        style="dashed", arrowhead="vee"
+    ];
+
+    DITOA -> DITOA_IMPL [
+        style="dashed", arrowhead="vee"
+    ];
+
+    DITOA_IMPL -> SIGN128 [
+        style="dashed", arrowhead="vee"
+    ];
+    DITOA_IMPL -> STRREV_POP_INIT [
+        dir="back", arrowtail="odiamond"
+    ];
+
+    STRREV -> STRREV_POP_INIT [
+        dir="back", arrowtail="odiamond"
+    ];
+
+}

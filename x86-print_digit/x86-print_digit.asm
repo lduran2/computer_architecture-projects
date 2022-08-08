@@ -19,6 +19,9 @@
 ;
 ; syscall requires
 ;       rax for the system call to perform
+;   outputs
+;       at rcx, copies the instruction pointer rip
+;       at r11, copies the flag register rflags
 ;
 ; sys_write
 ;   requires
@@ -26,9 +29,7 @@
 ;       rdi for the file descriptor of the stream to which to write
 ;       rsi for the address of character 0 of the string to write
 ;       rdx for the length of the string to write
-;   outputs
-;       at rcx, copies the instruction pointer rip
-;       at r11, copies the flag register rflags
+;   see syscall
 ;
 ; sys_exit
 ;   requires
@@ -74,7 +75,7 @@
 ;               enum { N_DIGITS = 1 };
 ;           after first syscall in WRITELN:
 ;               /* stores the length of ENDL (1) */
-;               enum { ENDL_LEN = 1};
+;               enum { ENDL_LEN = 1 };
 ;       rax:
 ;           for any syscall:
 ;               /* the system call to perform */
@@ -95,7 +96,7 @@
 ;               char *digit_cbuf;
 ;           after first syscall in WRITELN:
 ;               /* stores the line feed character */
-;               char const *const ENDL;
+;               char const *const ENDL = "\n";
 ;
 
 
@@ -120,7 +121,7 @@ _start:
     ; 30h ('0') to 39h ('9').  Thus, adding '0' to the r8 will convert
     ; to an ASCII character.
     add  r8,'0'                 ; convert to an ASCII character string
-    mov  [rsi],r8               ; place the digit in the buffer
+    mov  rsi[0],r8              ; place the digit in the buffer
     mov  rdx,1                  ; print 1 digit (1 character)
     ; print the string representation on a line
     ; rsi already contains the buffer from earlier.
@@ -137,7 +138,7 @@ END:
 ; end _start
 
 
-; WRITELN(char const *rsi, int rdx)
+; WRITELN(char const *rsi, size_t rdx)
 ; Writes the given string followed by a newline character.
 ; @regist rsi : char const * = string to write on remainder of current
 ;       line
@@ -148,7 +149,7 @@ WRITELN:
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
     syscall     ; execute the system call
-    ; C equivalent: write(FD_STDOUT, ENDL, 1);
+    ; C equivalent: write(FD_STDOUT, ENDL, 1u);
     ; print the newline
     mov  rax,sys_write  ; system call to perform
     mov  rsi,ENDL       ; newline to print
@@ -180,10 +181,11 @@ ENDL:           db 0ah  ; C equivalent: char const *const ENDL = "\n";
 ; This segment allocates memory to which to write.
 section .bss
 ; allocate space for string representations of integers
-DIGIT_CBUF:    resb 1           ; C equivalent: char digit_cbuf[1L];
+DIGIT_CBUF:     resb 1          ; C equivalent: char digit_cbuf[1u];
 
 ; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
 ; an array of bytes having the given value, whereas resb (reserve
-; bytes, e.g., DIGIT_CBUF) creates an array of the given size at the label.
+; bytes, e.g., DIGIT_CBUF) creates an array of the given size at the
+; label.
 ;
 
