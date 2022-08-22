@@ -244,24 +244,6 @@ END:
 ; @param
 ;   rax : in  char * = string representation of the integer to parse
 ATODU:
-    push rdx            ; backup the string length
-    push rax            ; backup address of string representation
-    call ATODU_SEEK     ; all the seeking algorithm
-    pop  rax            ; restore the address of string representation
-    pop  rdx            ; restore the string length
-    ret
-
-; ATODU_SEEK(int *rdi, int *rdx, char **rax)
-; Seeking implementation of ATODU.
-; After this runs, *rax will be the address of the next whitespace or
-; null character, and *rdx will represent the remaining length of the
-; string.
-; @see #ATODU
-ATODU_SEEK:
-    push rcx            ; backup counter
-    push r8             ; flags a negative integer
-    push rsi            ; free rsi for use as the current character
-                        ; this makes isspace easier to use
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
     mov  r8,0           ; reset negative flag
@@ -285,11 +267,7 @@ ATODU_STR_LOOP_END:
 ATODU_CLEANUP:
     mov  rsi,r9         ; restore radix
     mov  rdx,rcx        ; update the remaining length
-    pop  rsi            ; restore source index
-    pop  r8             ; restore general purpose
-    pop  rcx            ; restore counter
     ret
-; end ATODU_SEEK
 
 
 ; ISSPACE(char rsi)
@@ -303,7 +281,6 @@ ATODU_CLEANUP:
 ;   rsi : char = character to test
 ; @see https://linux.die.net/man/3/isspace
 ISSPACE:
-    push r8             ; backup general purpose r8 for inverse flag
     cmp  rsi,0dh        ; check upper bound
     jg   ISSPACE_GT     ; if greater, check for 20h
     cmp  rsi,09h        ; check lower bound
@@ -318,7 +295,6 @@ ISSPACE_FALSE:
     mov  r8,-1          ; set inverse to true
 ISSPACE_CHECKED:
     test r8,-1          ; test the inverse, setting ZF accordingly
-    pop  r8             ; restore general purpose
     ret
 ; end ISSPACE
 

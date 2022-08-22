@@ -1,7 +1,10 @@
-v4.1.1 - 2022-08-21t21:10Q
+v4.1.2 - 2022-08-22t03:40Q
+    removed callee register guarding in ATODU, ISSPACE
+
+v4.1.1 - 2022-08-22t03:40Q
     ATODU ignoring sign in ATODI
 
-v4.1.0 - 2022-08-21t21:10Q
+v4.1.0 - 2022-08-22t03:37Q
     ATODI from x86-calc
 
 v4.0.1 - 2022-08-21t21:00Q
