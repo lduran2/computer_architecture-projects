@@ -1,7 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Canonical : https://github.com/lduran2/computer_architecture-projects/blob/master/x86-print_inc5/x86-print_inc5.asm
-; Stores 5 in a register, increments the value and prints the result.
-; This implementation uses the DUTOA procedure that we implemented.
+; Canonical : https://github.com/lduran2/computer_architecture-projects/blob/master/x86-input_inc/x86-input_inc.asm
+; Stores an unsigned integer read from standard input in a register,
+; increments it and prints the result.
+; This implementation uses the DUTOA and ATODU procedures
+; that we implemented.
 ;
 
 ; For this implementation, DUTOA was based off of DITOA, but optimized
@@ -31,6 +33,15 @@
 ;   outputs
 ;       at rcx, copies the instruction pointer rip
 ;       at r11, copies the flag register rflags
+;
+; sys_read
+;   requires
+;       rax for sys_read
+;       rdi for the file descriptor of the stream from which to read
+;       rsi for the address of the buffer in which to store the string
+;           read from the input stream
+;       rdx for the capacity of the buffer
+;   see syscall
 ;
 ; sys_write
 ;   requires
@@ -92,7 +103,7 @@
 ;           /* unused because syscall stores rflags there */
 ;       r12:
 ;           size_t i_char;  /* index of current digit
-;                            * in buffer INT_STR_REP */
+;                            * in buffer OUTPUT_CBUF */
 ;       r13:
 ;           char c; /* the current digit popped from the stack */
 ;
@@ -147,10 +158,10 @@
 ;       rsi:
 ;           for DUTOA / for WRITELN:
 ;               /* the address of the buffer for the string
-;                * representation INT_STR_REP.  Since the purpose is to
+;                * representation OUTPUT_CBUF.  Since the purpose is to
 ;                * print this string representation, this is also the
 ;                * address of the string to write. */
-;               char *int_str_rep;
+;               char *OUTPUT_CBUF;
 ;           after first syscall in WRITELN:
 ;               /* stores the line feed character */
 ;               char const *const ENDL = "\n";
@@ -165,7 +176,7 @@
 ;                                      |             |             |         |
 ;                                      ^  +-------+  |             |         |
 ;                                      |  |       |  |             |         |
-; INT_STR_REP --------> rsi -----------+->|       | -+-> rsi ----->|         |
+; OUTPUT_CBUF --------> rsi -----------+->|       | -+-> rsi ----->|         |
 ;  buffer                                 |       |                | WRITELN |
 ;                                         |       |                |         |
 ;            +-----+                      | DUTOA |                |         |
@@ -191,13 +202,21 @@ section .text
 
 ; Beginning of the program.
 _start:
+    ; read in the digit from standard input
+    ; C equivalent: read(FD_STDIN, INPUT_CBUF, 1u);
+    mov  rax,sys_read           ; system call to perform
+    mov  rdi,FD_STDIN           ; file descriptor from which to read
+    mov  rsi,INPUT_CBUF         ; set rsi to address of the output buffer
+    mov  rdx,1                  ; set to read 1 digit (1 character)
+    syscall     ; execute the system call
     ; change the value of the register to print, r8
-    mov  r8,5                   ; store the value 5 in the register
+    mov  r8,rsi[0]              ; copy the digit from the input buffer
+    sub  r8,'0'                 ; convert from ASCII digit to integer digit
     inc  r8                     ; increment the value
     ; convert to an ASCII character string
     mov  rax,r8                 ; copy r8 into rax
     ; now rax is ready for DUTOA
-    mov  rsi,INT_STR_REP        ; set rsi to address of the string buffer
+    mov  rsi,OUTPUT_CBUF        ; set rsi to address of the string buffer
     call DUTOA                  ; perform Decimal Integer TO Ascii
     ; print the string representation on a line
     ; rsi already contains the buffer from earlier.
@@ -326,8 +345,11 @@ section .data
 
 ; System Call Constants:
 ;   system calls
+sys_read:       equ 0
 sys_write:      equ 1
 sys_exit:       equ 60
+;   file descriptor for STDIN
+FD_STDIN:       equ 0
 ;   file descriptor for STDOUT
 FD_STDOUT:      equ 1
 ;   exit with no errors
@@ -336,11 +358,11 @@ EXIT_SUCCESS:   equ 0
 ; Constants:
 ;   newline character
 ENDL:           db 0ah  ; C equivalent: char const *const ENDL = "\n";
-;   character length of a decimal integer (20 digits + sign)
+;   character length of a decimal integer (19 digits + sign + space)
 INT_LEN:        equ (20 + 1)
 
 ; INT_LEN will be used as the length to allocate the buffer
-; INT_STR_REP.
+; OUTPUT_CBUF.
 ;
 ; Reminder that INT_LEN above is like a C language macro.  In C,
 ; macros are expanded in the preprocessing step of the compilation
@@ -348,7 +370,7 @@ INT_LEN:        equ (20 + 1)
 ; (e.g., INT_LEN) instead becomes a synonym for the given value
 ; (e.g., (20 + 1)) in the symbol table used to assemble the program.
 ; Thus, it would not be possible to wait until runtime to define a size
-; INT_LEN for INT_STR_REP using a register.  By then it would be too
+; INT_LEN for OUTPUT_CBUF using a register.  By then it would be too
 ; late!  So instead, we give INT_LEN a maximum value (20 digits + sign)
 ; that we can expect for a 64-bit number.
 ;
@@ -359,11 +381,15 @@ INT_LEN:        equ (20 + 1)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; This segment allocates memory to which to write.
 section .bss
+; allocate space for input
+INPUT_CBUF:     resb INT_LEN    ; C equivalent:
+                                ;   char input_cbuf[(size_t)INT_LEN];
 ; allocate space for string representations of integers
-INT_STR_REP:    resb INT_LEN    ; C equivalent:
-                                ; char int_str_rep[(size_t)INT_LEN];
+OUTPUT_CBUF:    resb INT_LEN    ; C equivalent:
+                                ;   char output_cbuf[(size_t)INT_LEN];
+
 
 ; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
 ; an array of bytes having the given value, whereas resb (reserve
-; bytes, e.g., INT_STR_REP) creates an array of the given size at the label.
+; bytes, e.g., OUTPUT_CBUF) creates an array of the given size at the label.
 ;
