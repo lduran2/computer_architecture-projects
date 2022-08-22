@@ -233,7 +233,7 @@ END:
 ; end _start
 
 
-; ATODI(int *rdi, int rdx, char *rax)
+; ATODU(int *rdi, int rdx, char *rax)
 ; Ascii TO Integer
 ; parses an integer from its ASCII string representation.
 ; This implementation is optimized for decimal integers.
@@ -243,21 +243,21 @@ END:
 ;   rdx : int = length of string to parse
 ; @param
 ;   rax : in  char * = string representation of the integer to parse
-ATODI:
+ATODU:
     push rdx            ; backup the string length
     push rax            ; backup address of string representation
-    call ATODI_SEEK     ; all the seeking algorithm
+    call ATODU_SEEK     ; all the seeking algorithm
     pop  rax            ; restore the address of string representation
     pop  rdx            ; restore the string length
     ret
 
-; ATODI_SEEK(int *rdi, int *rdx, char **rax)
-; Seeking implementation of ATODI.
+; ATODU_SEEK(int *rdi, int *rdx, char **rax)
+; Seeking implementation of ATODU.
 ; After this runs, *rax will be the address of the next whitespace or
 ; null character, and *rdx will represent the remaining length of the
 ; string.
-; @see #ATODI
-ATODI_SEEK:
+; @see #ATODU
+ATODU_SEEK:
     push rcx            ; backup counter
     push r8             ; flags a negative integer
     push rsi            ; free rsi for use as the current character
@@ -265,42 +265,31 @@ ATODI_SEEK:
     mov  rdi,0          ; initialize the integer
     mov  rcx,rdx        ; set counter to rdx
     mov  r8,0           ; reset negative flag
-ATODI_SIGN_CHAR:
-    mov  rsi,[rax]          ; copy the character
-    and  rsi,7fh            ; ignore all non-ASCII bits
-    cmp  rsi,'-'            ; check if minus sign
-    jne  ATODI_STR_LOOP     ; if not, skip to loop
-    mov  r8,-1              ; otherwise, set negative integer flag
-    inc  rax                ; next character
 ; loop through digits until whitespace or null
-ATODI_STR_LOOP:
+ATODU_STR_LOOP:
     mov  rsi,[rax]          ; copy the character
     test rsi,7fh            ; check if null character
-    jz   ATODI_STR_LOOP_END ; break if all 0 ASCII bits
+    jz   ATODU_STR_LOOP_END ; break if all 0 ASCII bits
     and  rsi,7fh            ; ignore all non-ASCII bits
     call ISSPACE            ; if (space character),
-    jz   ATODI_STR_LOOP_END ; then finish the loop
+    jz   ATODU_STR_LOOP_END ; then finish the loop
     ; otherwise
     and  rsi,~'0'               ; disable '0' bits for integer value
 ; accumulate the next digit
     imul rdi,10                 ; multiply the sum by the radix
     add  rdi,rsi                ; add the digit to the sum so far
     inc  rax                ; next character in source
-    loop ATODI_STR_LOOP     ; repeat
-ATODI_STR_LOOP_END:
+    loop ATODU_STR_LOOP     ; repeat
+ATODU_STR_LOOP_END:
 ; set the sign of the number
-ATODI_INT_SIGN:
-    test r8,-1              ; check (negative integer flag)
-    jz   ATODI_CLEANUP      ; if reset, skip to cleanup
-    neg  rdi                ; otherwise, negate the integer
-ATODI_CLEANUP:
+ATODU_CLEANUP:
     mov  rsi,r9         ; restore radix
     mov  rdx,rcx        ; update the remaining length
     pop  rsi            ; restore source index
     pop  r8             ; restore general purpose
     pop  rcx            ; restore counter
     ret
-; end ATODI_SEEK
+; end ATODU_SEEK
 
 
 ; ISSPACE(char rsi)
