@@ -13,11 +13,37 @@
 ///
 /// The display shows 4 digit displays which are chosen by a 2-bit number,
 /// 00 to 11.   The digit is controlled by which anode is activated. 
-/// Each digit has the cathodes in common.  Anodes and cathodes are
+/// All the digit have the cathodes in common.  Anodes and cathodes are
 /// both active LOW meaning they are on with a low voltage.  Multiple
 /// digits are displayed by switching between anodes faster than the
 /// eye can see.  This allows us to display 4 digits using
-/// (4 cathodes) x (7 segments) = 28 wires.
+/// (4 anodes) + (7 segments) = 11 wires.
+///
+/// ++---------------------------++
+/// ++---------------------------++
+/// ||                           ||
+/// ||      +-----------------+  ||
+/// ||    +-)---------------+ |  ||
+/// ||  +-)-)---------88888 | |  ||
+/// ||  | | |     +---8   8-+ |  ||
+/// ||  | | |     |   8   8   |  ||
+/// ||  | | |     | +-88888   |  ||
+/// ||  | | |   +-)-)-8   8---+  ||
+/// ||  | | |   | | | 8   8      ||
+/// ||  | | | +-)-)-)-88888      ||
+/// ||  | | | | | | |            ||
+/// ++--|-|-|-|-|-|-|------------++
+/// ++--|-|-|-|-|-|-|------------++
+///     | | | | | | |
+///     +-)-)-)-)-)-)
+///     | +-)-)-)-)-)
+///     | | +-)-)-)-)
+///     | | | +-)-)-)
+///     | | | | +-)-)
+///     | | | | | +-)
+///     | | | | | | +
+///     | | | | | | |
+///     A B C D E F G
 ///
 /// Output:
 ///     anode : reg [3:0] = bit mask to activate the anode, active LOW
