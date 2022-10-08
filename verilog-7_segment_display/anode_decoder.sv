@@ -1,6 +1,9 @@
 //
-// lab3 : version 10/08/2022, 02:24 AM
-// by   : Leomar Duran
+// anode_decoder.sv
+// canonical  : https://github.com/lduran2/computer_architecture-projects/blob/master/verilog-7_segment_display/anode_decoder.sv
+// lab3       : version 10/08/2022, 02:24 AM
+// by         : Leomar Duran
+// synthesis >= Yosys 0.9.0
 //
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
@@ -66,7 +69,7 @@ module anode_decoder(
 	always @* begin
 		// translate the digit number to an anode bit mask.
 		// The number before the ":" represents a reference number
-		// to which to compare switch_in.  After the ":" is the block
+		// to which to compare switch_in.  After each ":", is the block
 		// of statements to perform if (switch_in) equals the
 		// reference.  This represents a multiplexer or file.
 		// It is best practice to provide a sensible default always.
