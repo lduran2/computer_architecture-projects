@@ -52,10 +52,11 @@
 /// Output:
 ///     anode : reg [3:0] = bit mask to activate the anode, active LOW
 /// Input:
-///     switch_in: wire [1:0] = two bit number representing the digit
+///     switch_in: wire [1:0] = 2-bit number representing the digit
 ///         to display
 ///
 /// See: svn_seg_decoder.sv
+///
 module anode_decoder(
 	output reg [3:0] anode,
 	input wire [1:0] switch_in
