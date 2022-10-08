@@ -64,7 +64,7 @@ module svn_seg_decoder(
 			// perform decoding
 			//
 			// remember that seg_out is a binary number 7'bGFEDCBA
-			// represented on the seven-segment display:
+			// represented on the 7-segment display:
 			//
 			// AAAAA
 			// F   B
