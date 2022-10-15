@@ -29,9 +29,12 @@ module divider #(parameter BIT_SIZE=4) (
 	input wire [(BIT_SIZE - 1):0] init_count
 	);
 
+	// represents the on state for the reset signal
+	parameter RST_ON = 1'b1;
+
 	// the next value to which to set the count
 	reg [(BIT_SIZE - 1):0] next_count;
-	// local copy of reset signal that can be overrided
+	// local copy (internal) of reset signal that can be overrided
 	reg in_rst;
 
 	// sequential logic:
@@ -43,7 +46,14 @@ module divider #(parameter BIT_SIZE=4) (
 
 	// combinational logic
 	always @* begin
+		// defaults
 		next_count = count; // hold
+		in_rst = rst; // use external reset signal
+
+		// reset the count to initial value on in_rst
+		if (in_rst == RST_ON) begin
+			next_count = init_count;
+		end // end if (in_rst == RST_ON)
 	end // always @*
 
 endmodule // divider
