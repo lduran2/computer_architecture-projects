@@ -65,7 +65,7 @@ module anode_decoder(
 	input wire [1:0] switch_in
 	);
 
-	// combinational model
+	// combinational logic
 	always @* begin
 		// translate the digit number to an anode bit mask.
 		// The number before the ":" represents a reference number

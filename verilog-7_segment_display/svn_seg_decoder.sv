@@ -55,6 +55,7 @@ module svn_seg_decoder(
 	// represents the on state for the display
 	parameter DISPLAY_STATE_ON = 1'b1;
 
+	// combinational logic
 	always @* begin
 		// default seg_out to all off if (display_on) if not on
 		// or if an invalid (bcd_in) is given
