@@ -39,12 +39,12 @@ module divider #(parameter BIT_SIZE=4) (
 	// local copy (internal) of reset signal that can be overrided
 	reg in_rst;
 
-	// sequential logic:
+	// sequential logic (flip-flop):
 	// whenever the clock goes from 0 to 1
 	always @(posedge clk) begin
 		// update the count
 		count <= next_count;
-	end
+	end // end always @(posedge clk)
 
 	// combinational logic
 	always @* begin
@@ -57,6 +57,11 @@ module divider #(parameter BIT_SIZE=4) (
 		if (ena == ENA_ON) begin
 			// note only to check count and change next_count
 			next_count = (count - 1'b1);
+			// if countdown finished
+			if (count == 1'd0) begin
+				tc = 1'b1; // signal terminal count
+				in_rst = RST_ON; // override reset
+			end // if (count == 1'd0)
 		end // if (ena == ENA_ON)
 
 		// reset the count to initial value on in_rst
