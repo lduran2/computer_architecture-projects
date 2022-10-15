@@ -30,7 +30,7 @@ module divider #(parameter BIT_SIZE=4) (
 	);
 
 	// the next value to which to set the count
-	reg [(BIT_SIZE - 1):0] next_count
+	reg [(BIT_SIZE - 1):0] next_count;
 	// local copy of reset signal that can be overrided
 	reg in_rst;
 
