@@ -34,6 +34,16 @@ module divider #(parameter BIT_SIZE=4) (
 	// local copy of reset signal that can be overrided
 	reg in_rst;
 
-	
+	// sequential logic:
+	// whenever the clock goes from 0 to 1
+	always @(posedge clk) begin
+		// update the count
+		count <= next_count;
+	end
+
+	// combinational logic
+	always @* begin
+		next_count = count; // hold
+	end // always @*
 
 endmodule // divider
