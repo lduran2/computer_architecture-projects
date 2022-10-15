@@ -36,8 +36,6 @@ module divider #(parameter BIT_SIZE=4) (
 
 	// the next value to which to set the count
 	reg [(BIT_SIZE - 1):0] next_count;
-	// local copy (internal) of reset signal that can be overrided
-	reg in_rst;
 
 	// sequential logic (flip-flop):
 	// whenever the clock goes from 0 to 1
@@ -50,24 +48,23 @@ module divider #(parameter BIT_SIZE=4) (
 	always @* begin
 		// defaults
 		next_count = count; // hold
-		in_rst = rst; // use external reset signal
 		tc = 1'b0; // no terminal count signal yet
 
 		// decrease count if enable signal is set
 		if (ena == ENA_ON) begin
 			// note only to check count and change next_count
 			next_count = (count - 1'b1);
-			// if countdown finished
+			// if countdown finished:
 			if (count == 1'd0) begin
-				tc = 1'b1; // signal terminal count
-				in_rst = RST_ON; // override reset
+				tc = 1'b1; // flag terminal count
 			end // if (count == 1'd0)
 		end // if (ena == ENA_ON)
 
-		// reset the count to initial value on in_rst
-		if (in_rst == RST_ON) begin
+		// reset the count to initial value
+		// on terminal count or rst
+		if ((tc == 1'b1) || (rst == RST_ON)) begin
 			next_count = init_count;
-		end // if (in_rst == RST_ON)
+		end // if ((tc == 1'b1) || (rst == RST_ON))
 	end // always @*
 
 endmodule // divider
