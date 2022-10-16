@@ -67,4 +67,7 @@ module ir_emitter_dp (
 		.init_count(1'b1), .clk(clk), .rst(rst), .ena(tc_2f)
 	);
 
+	// short circuit emitter_out if not sw_modulator
+	and emitter_and(emitter_out, sw_modulator, sw_carrier);
+
 endmodule // ir_emitter_dp
