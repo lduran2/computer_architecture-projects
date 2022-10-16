@@ -45,6 +45,10 @@ module ir_emitter_dp (
 
 	// terminal count of 76k divider
 	wire tc_2f;
+	// carrier signal produced by u_sw_carrier
+	wire sw_carrier;
+	// terminal count produced by u_sw_carrier
+	wire tc_carrier;
 
 	// the 2f divider
 	// the count is ignored
@@ -53,6 +57,14 @@ module ir_emitter_dp (
 		.tc(tc_modulator), .count(),
 		// input
 		.init_count(COUNT_2F), .clk(clk), .rst(rst), .ena(ena)
+	);
+
+	// the 50%-duty cycle square wave carrier divider
+	divider #(.BIT_SIZE(1)) u_sw_carrier(
+		// output
+		.tc(tc_carrier), .count(sw_carrier),
+		// input
+		.init_count(1'b1), .clk(clk), .rst(rst), .ena(tc_2f)
 	);
 
 endmodule // ir_emitter_dp
