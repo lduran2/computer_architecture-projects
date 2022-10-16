@@ -8,11 +8,17 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Creates a custom clock by dividing the input clock.
 //
+// The divider is parameterized to allow for different values of
+// BIT_SIZE for the count.
+//
 // The `init_count` represents the amount by which to divide the input
 // clock signal, that is, given the input clock frequency `in_freq` and
 // the desired clock frequency `out_freq`, we need an `init_count` s.t.
 //
-//         (in_freq - (out_freq)(init_count)) in Z[out_freq].
+//         ((out_freq)(init_count + 1) - in_freq) in Z[out_freq].
+//
+// The count will go from init_count down to 0 for a total count of
+// (init_count + 1) states.
 //
 // The module accepts the input clock signal `clk` and produces the
 // terminal count signal `tc` as a new clock signal whenever the
@@ -26,7 +32,7 @@
 //     count: reg [(BIT_SIZE - 1):0] = current value of the countdown
 // Input:
 //     clk: wire = input clock signal
-//     rst: wire = signal to force reset the clock, so that
+//     rst: wire = signal to force reset the divider, so that
 //         `count = init_count`
 //     ena: wire = signal to enable countdown.  When the wire is reset
 //         the count holds.
