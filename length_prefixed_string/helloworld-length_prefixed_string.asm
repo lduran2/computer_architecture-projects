@@ -71,13 +71,12 @@ PRINT_LPS:
 ; Separate the given byte buffer and its length.
 ; @regist rsi : in  char const * = length-prefixed byte buffer
 ;     to separate
-; @regist rsi : out char const * = byte buffer without length
-;     prefix
+; @regist rsi : out char const * = address of first byte in the buffer
 ; @regist rdx : out int = length of the byte buffer
 GET_CBUF_LEN:
     mov  rdx,[rsi]      ; get length of the byte buffer
     and  rdx,LSBYTE     ; ignore all but least significant byte
-    inc  rsi            ; move to first byte in greeting
+    inc  rsi            ; move to first byte in buffer
     ret
 ; end GET_CBUF_LEN
 
