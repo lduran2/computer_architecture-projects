@@ -1,7 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; helloworld.asm
+; helloworld-length_prefixed_string.asm
 ; Example program for printing a greeting in x86-64 assembly.
-; Date: 2022-07-16t17:00
+; This implementation is optimized for length-prefixed strings, and
+; includes a second test string.
+; Date: 2022-10-23t17:00
 ;
 
 
@@ -77,9 +79,16 @@ FD_STDOUT:      equ 1
 EXIT_SUCCESS:   equ 0
 
 ; define bytes at GREETING as the string "Hello world!", followed by
-; the newline character '\x0a'
-GREETING:    db "Hello world!", 0ah
-; calculate the length of GREETING giving GREET_LEN
-; $ refers to the last byte of GREETING
-GREET_LEN:   equ ($ - GREETING)
+; the newline character '\x0a', prefixed by its total length
+GREETING:    db GREET_LEN, "Hello world!", 0ah
+; calculate the length of GREETING giving GREET_LEN.
+; $ refers to the last byte of GREETING.
+; Subtract (GREETING + 1) because the length is at GREETING
+GREET_LEN:   equ ($ - (GREETING + 1))
+
+; define bytes at QUERY as the string "How are you?", followed by
+; the newline character '\x0a', prefixed by its total length
+QUERY:       db QUERY_LEN, "How are you?", 0ah
+; calculate the length of QUERY giving QUERY_LEN.
+QUERY_LEN:   equ ($ - (QUERY + 1))
 
