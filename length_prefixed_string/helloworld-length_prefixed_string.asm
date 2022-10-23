@@ -3,7 +3,27 @@
 ; Example program for printing a greeting in x86-64 assembly.
 ; This implementation is optimized for length-prefixed strings, and
 ; includes a second test string.
-; Date: 2022-10-23t17:00
+;
+; Length-prefixed strings are strings that include the length of the
+; string as their first byte, so it is possible to find the end of the
+; string at address S with length LEN as the address (S + 1 + LEN). 
+; They are also known as Pascal strings.
+;
+; This is in contrast with null-terminated strings or "C strings",
+; which end in '\0' and where you would find the end of the string as
+; the first null character.  This is also in contrast with
+; (string, length) pairs, where the string and length are stored in two
+; registers.
+;
+; The advantage of length-prefixed strings is that their address can be
+; stored in one register, and there is no need to find the null
+; terminator to find the end of the string.
+;
+; However, the disadvantage is that this will only work for strings
+; that have at most ((2**8) - 1) = 255 characters because 255 is the
+; maximum value that can be stored in a byte.
+;
+; Date: 2022-10-23t15:51
 ;
 
 
@@ -33,20 +53,32 @@ END:
 
 
 ; PRINT_LPS(char const *rsi)
-; Writes the given length prefixed string.
+; Writes the given length-prefixed string.
 ; @regist rsi : char const * = string to write
 PRINT_LPS:
     ; C equivalent: write(FD_STDOUT, &rsi[1], rsi[0]);
     ; separate the string and its length
-    mov  rdx,[rsi]      ; get length of the string to write
-    and  rdx,LSBYTE     ; ignore all but least significant byte
-    inc  rsi            ; move to first byte in greeting
+    call GET_CBUF_LEN
     ; print the string in rsi
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
     syscall     ; execute the system call
     ret
 ; end PRINT_LPS
+
+
+; GET_CBUF_LEN(ref char const *rsi, out int rdx)
+; Separate the given byte buffer and its length.
+; @regist rsi : in  char const * = length-prefixed byte buffer
+;     to separate
+; @regist rsi : out char const * = byte arry without length prefix
+; @regist rdx : out int = length of the byte buffer
+GET_CBUF_LEN:
+    mov  rdx,[rsi]      ; get length of the byte buffer
+    and  rdx,LSBYTE     ; ignore all but least significant byte
+    inc  rsi            ; move to first byte in greeting
+    ret
+; end GET_CBUF_LEN
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
