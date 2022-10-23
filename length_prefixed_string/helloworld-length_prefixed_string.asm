@@ -23,7 +23,7 @@
 ; that have at most ((2**8) - 1) = 255 characters because 255 is the
 ; maximum value that can be stored in a byte.
 ;
-; Date: 2022-10-23t15:59
+; Date: 2022-10-23t16:48
 ;
 
 
@@ -112,9 +112,11 @@ section .data
 ;   into the symbol table.  Thus, after "equate", the address is the
 ;   same as before it, whereas after "define", the address is moved
 ;   forward as much as the definition required;  e.g.,
-;       GREETING:   db "Hello world!", 0ah
-;   moves the address forward 13 bytes, the length of "Hello world!" +
-;   a newline character.
+;       GREETING:    db GREET_LEN, "Hello world!", 0ah
+;   moves the address forward 14 bytes:
+;       + the byte GREET_LEN
+;       + the length of "Hello world!"
+;       + a newline character.
 ;
 
 ; System Call Constants:
@@ -131,9 +133,9 @@ EXIT_SUCCESS:   equ 0
 LSBYTE:         equ 0ffh
 
 ; define bytes at GREETING as
-;   - the string "Good morning, world!"
-;   - followed by the newline character '\x0a'
-;   - prefixed by its total length
+;   + the string "Good morning, world!"
+;   + followed by the newline character '\x0a'
+;   + prefixed by its total length
 GREETING:    db GREET_LEN, "Good morning, world!", 0ah
 ; calculate the length of GREETING giving GREET_LEN.
 ; $ refers to the last byte of GREETING.
@@ -141,9 +143,9 @@ GREETING:    db GREET_LEN, "Good morning, world!", 0ah
 GREET_LEN:   equ ($ - (GREETING + 1))
 
 ; define bytes at QUERY as
-;   - the string "How are you?"
-;   - followed by the newline character '\x0a'
-;   - prefixed by its total length
+;   + the string "How are you?"
+;   + followed by the newline character '\x0a'
+;   + prefixed by its total length
 QUERY:       db QUERY_LEN, "How are you?", 0ah
 ; calculate the length of QUERY giving QUERY_LEN.
 QUERY_LEN:   equ ($ - (QUERY + 1))
