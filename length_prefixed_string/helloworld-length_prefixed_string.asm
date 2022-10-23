@@ -23,7 +23,7 @@
 ; that have at most ((2**8) - 1) = 255 characters because 255 is the
 ; maximum value that can be stored in a byte.
 ;
-; Date: 2022-10-23t15:51
+; Date: 2022-10-23t15:59
 ;
 
 
@@ -71,7 +71,8 @@ PRINT_LPS:
 ; Separate the given byte buffer and its length.
 ; @regist rsi : in  char const * = length-prefixed byte buffer
 ;     to separate
-; @regist rsi : out char const * = byte arry without length prefix
+; @regist rsi : out char const * = byte buffer without length
+;     prefix
 ; @regist rdx : out int = length of the byte buffer
 GET_CBUF_LEN:
     mov  rdx,[rsi]      ; get length of the byte buffer
