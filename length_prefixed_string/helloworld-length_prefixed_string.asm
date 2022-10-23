@@ -1,12 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; helloworld-length_prefixed_string.asm
-; Example program for printing a greeting in x86-64 assembly.
-; This implementation is optimized for length-prefixed strings, and
-; includes a second test string.
+; Example program for printing a greeting in x86-64 assembly optimized
+; for length-prefixed strings.  It includes a second test string.
 ;
 ; Length-prefixed strings are strings that include the length of the
-; string as their first byte, so it is possible to find the end of the
-; string at address S with length LEN as the address (S + 1 + LEN). 
+; string as their first byte, so one may find the end of the string at
+; address S with length S[0] as the address (S + 1 + S[0]). 
 ; They are also known as Pascal strings.
 ;
 ; This is in contrast with null-terminated strings or "C strings",
@@ -23,7 +22,7 @@
 ; that have at most ((2**8) - 1) = 255 characters because 255 is the
 ; maximum value that can be stored in a byte.
 ;
-; Date: 2022-10-23t16:48
+; Date: 2022-10-23t17:36
 ;
 
 
@@ -37,11 +36,11 @@ section .text
 ; Beginning of the program to print a greeting.
 _start:
     ; C equivalent: PRINT_LPS(GREETING);
-    mov  rsi,GREETING       ; greeting string to write
-    call PRINT_LPS          ;
+    mov  rsi,GREETING       ; greeting length-prefixed string to print
+    call PRINT_LPS          ; print the length-prefixed string
     ; C equivalent: PRINT_LPS(QUERY);
-    mov  rsi,QUERY          ; greeting string to write
-    call PRINT_LPS          ;
+    mov  rsi,QUERY          ; query length-prefixed string to print
+    call PRINT_LPS          ; print the length-prefixed string
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -53,10 +52,14 @@ END:
 
 
 ; PRINT_LPS(char const *rsi)
-; Writes the given length-prefixed string.
-; @regist rsi : char const * = string to write
+; Writes the given length-prefixed string to STDOUT.
+; @regist rsi : char const * = string to print
+; @sideffect rdx <- [rsi]
+; @sideffect rsi <- (rsi + 1)
+; @sideffect rcx <- rip
+; @sideffect r11 <- rflags
 PRINT_LPS:
-    ; C equivalent: write(FD_STDOUT, &rsi[1], rsi[0]);
+    ; C equivalent: write(FD_STDOUT, &rsi[1], *rsi);
     ; separate the string and its length
     call GET_CBUF_LEN
     ; print the string in rsi
@@ -67,12 +70,12 @@ PRINT_LPS:
 ; end PRINT_LPS
 
 
-; GET_CBUF_LEN(ref char const *rsi, out int rdx)
+; GET_CBUF_LEN(char const *ref rsi, size_t const out rdx)
 ; Separate the given byte buffer and its length.
-; @regist rsi : in  char const * = length-prefixed byte buffer
+; @regist rsi : char const *in = length-prefixed byte buffer
 ;     to separate
-; @regist rsi : out char const * = address of first byte in the buffer
-; @regist rdx : out int = length of the byte buffer
+; @regist rsi : char const *out = address of first byte in the buffer
+; @regist rdx : size_t const out = length of the byte buffer
 GET_CBUF_LEN:
     mov  rdx,[rsi]      ; get length of the byte buffer
     and  rdx,LSBYTE     ; ignore all but least significant byte
@@ -128,14 +131,14 @@ FD_STDOUT:      equ 1
 ;   exit with no errors
 EXIT_SUCCESS:   equ 0
 
-; Constants used in program:
+; Constants:
 ;   bitmask for least significant byte
 LSBYTE:         equ 0ffh
 
 ; define bytes at GREETING as
+;   + prefix of the string's total length
 ;   + the string "Good morning, world!"
 ;   + followed by the newline character '\x0a'
-;   + prefixed by its total length
 GREETING:    db GREET_LEN, "Good morning, world!", 0ah
 ; calculate the length of GREETING giving GREET_LEN.
 ; $ refers to the last byte of GREETING.
@@ -143,9 +146,9 @@ GREETING:    db GREET_LEN, "Good morning, world!", 0ah
 GREET_LEN:   equ ($ - (GREETING + 1))
 
 ; define bytes at QUERY as
+;   + prefix of the string's total length
 ;   + the string "How are you?"
 ;   + followed by the newline character '\x0a'
-;   + prefixed by its total length
 QUERY:       db QUERY_LEN, "How are you?", 0ah
 ; calculate the length of QUERY giving QUERY_LEN.
 QUERY_LEN:   equ ($ - (QUERY + 1))
