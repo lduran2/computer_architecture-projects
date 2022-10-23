@@ -16,21 +16,37 @@ section .text
 
 ; Beginning of the program to print a greeting.
 _start:
-    ; C equivalent: write(FD_STDOUT, GREETING, GREET_LEN);
-    ; print the greeting to standard output
-    mov rax,sys_write       ; system call to perform: sys_write
-    mov rdi,FD_STDOUT       ; file descriptor to which to write
-    mov rsi,GREETING        ; greeting string to write
-    mov rdx,GREET_LEN       ; length of the string to write
-    syscall     ; execute the system call
+    ; C equivalent: PRINT_LPS(GREETING);
+    mov  rsi,GREETING       ; greeting string to write
+    call PRINT_LPS          ;
+    ; C equivalent: PRINT_LPS(QUERY);
+    mov  rsi,QUERY          ; greeting string to write
+    call PRINT_LPS          ;
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
     ; exit without error
-    mov rax,sys_exit        ; system call to perform: sys_exit
-    mov rdi,EXIT_SUCCESS    ; errorlevel (0 = EXIT_SUCCESS)
+    mov  rax,sys_exit       ; system call to perform: sys_exit
+    mov  rdi,EXIT_SUCCESS   ; errorlevel (0 = EXIT_SUCCESS)
     syscall     ; execute the system call
 ; end _start
+
+
+; PRINT_LPS(char const *rsi)
+; Writes the given length prefixed string.
+; @regist rsi : char const * = string to write
+PRINT_LPS:
+    ; C equivalent: write(FD_STDOUT, &rsi[1], rsi[0]);
+    ; separate the string and its length
+    mov  rdx,[rsi]      ; get length of the string to write
+    and  rdx,LSBYTE     ; ignore all but least significant byte
+    inc  rsi            ; move to first byte in greeting
+    ; print the string in rsi
+    mov  rax,sys_write  ; system call to perform
+    mov  rdi,FD_STDOUT  ; file descriptor to which to write
+    syscall     ; execute the system call
+    ret
+; end PRINT_LPS
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -78,16 +94,24 @@ FD_STDOUT:      equ 1
 ;   exit with no errors
 EXIT_SUCCESS:   equ 0
 
-; define bytes at GREETING as the string "Hello world!", followed by
-; the newline character '\x0a', prefixed by its total length
-GREETING:    db GREET_LEN, "Hello world!", 0ah
+; Constants used in program:
+;   bitmask for least significant byte
+LSBYTE:         equ 0ffh
+
+; define bytes at GREETING as
+;   - the string "Good morning, world!"
+;   - followed by the newline character '\x0a'
+;   - prefixed by its total length
+GREETING:    db GREET_LEN, "Good morning, world!", 0ah
 ; calculate the length of GREETING giving GREET_LEN.
 ; $ refers to the last byte of GREETING.
 ; Subtract (GREETING + 1) because the length is at GREETING
 GREET_LEN:   equ ($ - (GREETING + 1))
 
-; define bytes at QUERY as the string "How are you?", followed by
-; the newline character '\x0a', prefixed by its total length
+; define bytes at QUERY as
+;   - the string "How are you?"
+;   - followed by the newline character '\x0a'
+;   - prefixed by its total length
 QUERY:       db QUERY_LEN, "How are you?", 0ah
 ; calculate the length of QUERY giving QUERY_LEN.
 QUERY_LEN:   equ ($ - (QUERY + 1))
