@@ -18,9 +18,11 @@
 ; stored in one register, and there is no need to find the null
 ; terminator to find the end of the string.
 ;
-; However, the disadvantage is that this will only work for strings
+; However, the disadvantages are that this will only work for strings
 ; that have at most ((2**8) - 1) = 255 characters because 255 is the
-; maximum value that can be stored in a byte.
+; maximum value that can be stored in a byte, and that each length-prefixed
+; string requires 1 extra contiguous byte to store compared to
+; (string, length) pairs.
 ;
 ; Date: 2022-10-23t17:36
 ;
@@ -35,12 +37,12 @@ section .text
 
 ; Beginning of the program to print a greeting.
 _start:
-    ; C equivalent: PRINT_LPS(GREETING);
+    ; C equivalent: WRITE_LPS(GREETING);
     mov  rsi,GREETING       ; greeting length-prefixed string to print
-    call PRINT_LPS          ; print the length-prefixed string
-    ; C equivalent: PRINT_LPS(QUERY);
+    call WRITE_LPS          ; print the length-prefixed string
+    ; C equivalent: WRITE_LPS(QUERY);
     mov  rsi,QUERY          ; query length-prefixed string to print
-    call PRINT_LPS          ; print the length-prefixed string
+    call WRITE_LPS          ; print the length-prefixed string
 ; label for end of the program
 END:
     ; C equivalent: exit(EXIT_SUCCESS);
@@ -51,37 +53,44 @@ END:
 ; end _start
 
 
-; PRINT_LPS(char const *rsi)
+; WRITE_LPS(char const *ref rsi)
 ; Writes the given length-prefixed string to STDOUT.
-; @regist rsi : char const * = string to print
-; @sideffect rdx <- [rsi]
-; @sideffect rsi <- (rsi + 1)
-; @sideffect rcx <- rip
-; @sideffect r11 <- rflags
-PRINT_LPS:
+;
+; GET_LP_CBUF_LEN is called.
+; Additionally a system call is executed, resulting in
+;       rcx <- rip,
+;       r11 <- rflags.
+;
+; @regist rsi : char const *ref = string to write
+; @see GET_LP_CBUF_LEN
+WRITE_LPS:
     ; C equivalent: write(FD_STDOUT, &rsi[1], *rsi);
-    ; separate the string and its length
-    call GET_CBUF_LEN
-    ; print the string in rsi
+    call GET_LP_CBUF_LEN    ; separate the string and its length
+    ; print the string now in rsi of length rdx
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
     syscall     ; execute the system call
     ret
-; end PRINT_LPS
+; end WRITE_LPS
 
 
-; GET_CBUF_LEN(char const *ref rsi, size_t const out rdx)
+; GET_LP_CBUF_LEN(char const *ref rsi, size_t const out rdx)
 ; Separate the given byte buffer and its length.
-; @regist rsi : char const *in = length-prefixed byte buffer
-;     to separate
-; @regist rsi : char const *out = address of first byte in the buffer
+; Since the address at rsi is overwritten, it is important to keep another
+; reference to it.
+; @regist rsi : char const *ref = the byte buffer
 ; @regist rdx : size_t const out = length of the byte buffer
-GET_CBUF_LEN:
+; @precondition:
+;       rsi points to the length-prefix byte of the buffer
+; @postcondition:
+;       rsi will point to the first non-length byte in the buffer
+;       rdx will contain the length of the byte buffer
+GET_LP_CBUF_LEN:
     mov  rdx,[rsi]      ; get length of the byte buffer
     and  rdx,LSBYTE     ; ignore all but least significant byte
     inc  rsi            ; move to first byte in buffer
     ret
-; end GET_CBUF_LEN
+; end GET_LP_CBUF_LEN
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -117,7 +126,7 @@ section .data
 ;   forward as much as the definition required;  e.g.,
 ;       GREETING:    db GREET_LEN, "Hello world!", 0ah
 ;   moves the address forward 14 bytes:
-;       + the byte GREET_LEN
+;       + the byte defined by GREET_LEN
 ;       + the length of "Hello world!"
 ;       + a newline character.
 ;
@@ -142,7 +151,7 @@ LSBYTE:         equ 0ffh
 GREETING:    db GREET_LEN, "Good morning, world!", 0ah
 ; calculate the length of GREETING giving GREET_LEN.
 ; $ refers to the last byte of GREETING.
-; Subtract (GREETING + 1) because the length is at GREETING
+; Subtract (GREETING + 1) because the length is at GREETING[0]
 GREET_LEN:   equ ($ - (GREETING + 1))
 
 ; define bytes at QUERY as
