@@ -7,7 +7,7 @@
 | Mnemonic | Addressing Mode | Instruction | Syntax | Example | Operand   | Operand Description  | Side effect |
 |----------|-------------|-----------------|--------|---------|-----------|----------------------|-------------|
 | **DATA TRANSFER**
-| `mov`    | Register to Register   | Copy contents of a register into another register  | `mov <register-out>, [<register-in>]` | `mov r8, rsi[0]` | `register-out` | the register to which to write | N/A
+| `mov`    | Register to Register   | Copy contents of a register into another register  | `mov <register-out>, [<register-in>]` | `mov rax, r8` | `register-out` | the register to which to write | N/A
 |          |                          |                              |                           |                      | `register-in`    | register containing the value to write into the other register |
 | `mov`    | Memory to Register   | Loads contents of an address in memory into a register  | `mov <register-out>, [<address-in>]` | `mov r8, rsi[0]` | `register-out` | the register to which to write | N/A
 |          |                          |                              |                           |                      | `address-in`    | address containing the value to write into the register |
