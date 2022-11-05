@@ -25,8 +25,8 @@
 | `call` | from Memory | Jump to an subroutine address | `call <address>` | `call WRITELN` |`address`| the address to which to jump | `[rsp] <- rip` |
 |        |             |                               |                  |                ||| ` rsp -= ??` |
 | `ret`  | from Memory | Return to the location at `[rsp]` (from last `call`) | `ret` | `ret` | N/A | N/A | `rsp += ??`
-| `int` | N/A | Perform an interrupt. | `int <code>` | `int 80h` | `code` | the code of the interrupt to perform | [\[1\]](#int-side_effect) |
+| `int` | N/A | Perform an interrupt. | `int <code>` | `int 80h` | `code` | the code of the interrupt to perform | [^ int-side_effect] |
 | `syscall` | N/A | Perform a system call interrupt. | `syscall` | `syscall` | N/A | N/A | `rcx <- rip` |
 |           |  |                                  |           |           |  |  | `r11 <- rflags` |
 
-1. <a id="int-side_effect"></a> Interrupts may affect specific registers.  Please see the documentation for that specific interrupt.
+[^int-side_effect]: Interrupts may affect specific registers.  Please see the documentation for that specific interrupt.
