@@ -4,13 +4,13 @@
 
 ## Instruction Set
 
-| Mnemonic | Addressing Mode | Instruction | Syntax | Example | Argument  | Argument Description | Side effect |
+| Mnemonic | Addressing Mode | Instruction | Syntax | Example | Operand   | Operand Description  | Side effect |
 |----------|-------------|-----------------|--------|---------|-----------|----------------------|-------------|
 | **DATA TRANSFER**
 | `mov`    | Intermediate to Register | Move a value into a register | `mov <register-out>, <value-in>` | `mov rax, sys_write` | `register-out` | the register to which to write | N/A
 |          |                          |                              |                           |                      | `value-in`    | the value to write
 | `mov`    | Memory to Register   | Loads contents of an address in memory into a register  | `mov <register-out>, [<address-in>]` | `mov r8, rsi[0]` | `registor-out` | the register at which to write | N/A
-|          |                          |                              |                           |                      | `register-in`    | address containing the value to write into the register |
+|          |                          |                              |                           |                      | `address-in`    | address containing the value to write into the register |
 | `mov`    | Memory from Register | Stores contents of a register into an address in memory | `mov [<address-out>], <register-in>` | `mov rsi[0], r8` | `address-out` | the address at which to write | N/A
 |          |                          |                              |                           |                      | `register-in`    | register containing the value to write |
 | `push` | from Register | Push a value from a register unto the stack | `push <register-in>` | `push rdx` | `register-in` | the register whose value to push onto the stack | `rsp -= ??` |
