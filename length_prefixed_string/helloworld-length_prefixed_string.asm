@@ -4,8 +4,8 @@
 ; for length-prefixed strings.  It includes a second test string.
 ;
 ; Length-prefixed strings are strings that include the length of the
-; string as their first byte, so one may find the end of the string at
-; address S with length S[0] as the address (S + 1 + S[0]). 
+; string as their first byte, so one finds the end of the string at
+; address S with length S[0] at the address (S + 1 + S[0]). 
 ; They are also known as Pascal strings.
 ;
 ; This is in contrast with null-terminated strings or "C strings",
@@ -56,16 +56,16 @@ END:
 ; WRITE_LPS(char const *ref rsi)
 ; Writes the given length-prefixed string to STDOUT.
 ;
-; GET_LP_CBUF_LEN is called.
+; LP_GET_BUF_LEN is called.
 ; Additionally a system call is executed, resulting in
 ;       rcx <- rip,
 ;       r11 <- rflags.
 ;
 ; @regist rsi : char const *ref = string to write
-; @see GET_LP_CBUF_LEN
+; @see LP_GET_BUF_LEN
 WRITE_LPS:
     ; C equivalent: write(FD_STDOUT, &rsi[1], *rsi);
-    call GET_LP_CBUF_LEN    ; separate the string and its length
+    call LP_GET_BUF_LEN     ; separate the string and its length
     ; print the string now in rsi of length rdx
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
@@ -74,7 +74,7 @@ WRITE_LPS:
 ; end WRITE_LPS
 
 
-; GET_LP_CBUF_LEN(char const *ref rsi, size_t const out rdx)
+; LP_GET_BUF_LEN(char const *ref rsi, size_t const out rdx)
 ; Separate the given byte buffer and its length.
 ; Since the address at rsi is overwritten, it is important to keep another
 ; reference to it.
@@ -85,12 +85,12 @@ WRITE_LPS:
 ; @postcondition:
 ;       rsi will point to the first non-length byte in the buffer
 ;       rdx will contain the length of the byte buffer
-GET_LP_CBUF_LEN:
+LP_GET_BUF_LEN:
     mov  rdx,[rsi]      ; get length of the byte buffer
     and  rdx,LSBYTE     ; ignore all but least significant byte
     inc  rsi            ; move to first byte in buffer
     ret
-; end GET_LP_CBUF_LEN
+; end LP_GET_BUF_LEN
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
