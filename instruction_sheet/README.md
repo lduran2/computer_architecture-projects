@@ -7,16 +7,16 @@
 | Mnemonic | Addressing Mode | Instruction | Syntax | Example | Operand   | Operand Description  | Side effect |
 |----------|-------------|-----------------|--------|---------|-----------|----------------------|-------------|
 | **DATA TRANSFER**
-| `mov`    | Memory to Register   | Move contents of an address in memory into a register  | `mov <register-out>, [<address-in>]` | `mov r8, rsi[0]` | `registor-out` | the register at which to write | N/A
-|          |                          |                              |                           |                      | `address-in`    | address containing the value to write into the register |
-| `mov`    | Memory to Register   | Loads contents of an address in memory into a register  | `mov <register-out>, [<address-in>]` | `mov r8, rsi[0]` | `registor-out` | the register at which to write | N/A
+| `mov`    | Register to Register   | Copy contents of a register into another register  | `mov <register-out>, [<register-in>]` | `mov r8, rsi[0]` | `register-out` | the register to which to write | N/A
+|          |                          |                              |                           |                      | `register-in`    | register containing the value to write into the other register |
+| `mov`    | Memory to Register   | Loads contents of an address in memory into a register  | `mov <register-out>, [<address-in>]` | `mov r8, rsi[0]` | `register-out` | the register to which to write | N/A
 |          |                          |                              |                           |                      | `address-in`    | address containing the value to write into the register |
 | `mov`    | Memory from Register | Stores contents of a register into an address in memory | `mov [<address-out>], <register-in>` | `mov rsi[0], r8` | `address-out` | the address at which to write | N/A
 |          |                          |                              |                           |                      | `register-in`    | register containing the value to write |
 | `mov`    | Intermediate to Register | Move a constant into a register | `mov <register-out>, <constant-in>` | `mov rax, sys_write` | `register-out` | the register to which to write | N/A
 |          |                          |                              |                           |                      | `constant-in`    | the constant to write
 | `push` | from Register | Push a value from a register unto the stack | `push <register-in>` | `push rdx` | `register-in` | the register whose value to push onto the stack | `rsp -= ??` |
-| `pop` | to Register | Pop a value from the stack into a register | `pop <register-out>` | `pop r13` | `register-out` | the register into which to pop | `rsp += ??` |
+| `pop` | to Register | Pop a value from the stack into a register | `pop <register-out>` | `pop r13` | `register-out` | the register into which to pop the stack | `rsp += ??` |
 | **ARITHMETIC**
 | `add` | Immediate to Register | Add the given constant to the value of the register | `add <register-out>, <constant-in>` | `add r8, '0'` | `register-out` | the register to which to add | N/A
 |       |                       |                                                  |                                  |               | `constant-in`     | the constant to add | N/A
