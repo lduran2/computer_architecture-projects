@@ -242,13 +242,21 @@ There are other registers such as the flag register `rflags` and the instruction
 | `add` | Immediate to Register | Add the given constant to the value of the register | `add <register-out>, <constant-in>` | `add r8, '0'` | `register-out` | the register to which to add | N/A
 |       |                       |                                                  |                                  |               | `constant-in`     | the constant to add | N/A
 | `inc` | to/from Register | Increment the value of a register | `inc <register>` | `inc r8` | `register` | the register whose value to increment | N/A |
+| `sub` | Immediate to Register | Subtract the given constant from the value of the register | `sub <register-out>, <constant-in>` | `sub r13, '0'` | `register-out` | the register from which to subtract | N/A
+|       |                       |                                                  |                                  |               | `constant-in`     | the constant to subtract | N/A
 | `cmp` | Register with Immediate | Compare the value in the register with the constant | `cmp <register-in>, <constant-in>` | `cmp rax, 0` | `register-in` | register containing one of the values to compare | 
 |       |                         |                                                      |                                    |              | `constant-in` | the other value to compare
+| `mul` | from Register | Multiply (unsigned) by an integer | `mul <multiplier>` | `mul r10` | `multiplier` | register containing the multiplier | `rax:rdx <- (multiplier × rax)`  |
 | `div` | from Register | Divide (unsigned) by an integer | `div <divisor>` | `div r10` | `divisor` | register containing the divisor | `rax R rdx <- (rdx:rax / divisor)`  |
+| **ARITHMETIC**
+| `and` | Immediate to Register | Performs AND operation using the given constant with the value of the register | `and <register-out>, <constant-in>` | `and r13,ASCII_MASK` | `register-out` | the register to which to AND | N/A
+|       |                       |                                                  |                                  |               | `constant-in`     | the constant to AND | N/A
 | **CONTROL TRANSFER**
 | `call` | from Memory | Jump to an subroutine address | `call <address>` | `call WRITELN` |`address`| the address to which to jump | `[rsp] <- rip` |
 |        |             |                               |                  |                ||| ` rsp -= 8` |
+| `jmp`  | N/A         | Jump unconditionally | `jmp <address>` | `je ATODU_LOOP` | `address` | the address to which to jump
 | `ret`  | from Memory | Return to the location at `[rsp]` (from last `call`) | `ret` | `ret` | N/A | N/A | `rsp += 8`
+| `je`/`jz` | N/A         | Jump if the previous operation resulted in zero. For `cmp` this is the equivalent of equality | `je <address>` | `je ATODU_LOOP_END` | `address` | the address to which to jump
 | `jne`/`jnz` | N/A         | Jump if the previous operation did not result in zero. For `cmp` this is the equivalent of inequation | `jne <address>` | `jne DUTOA_DIVIDE_INT_LOOP` | `address` | the address to which to jump
 | `loop` | N/A | Loop until `rcx == 0` | `loop <address>` | `loop STRREV_POP_LOOP` | `address` | the address of the start of the loop | `rcx -= 1`
 | `int` | N/A | Perform an interrupt. | `int <code>` | `int 80h` | `code` | the code of the interrupt to perform | [^ int-side_effect] |
