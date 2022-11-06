@@ -227,7 +227,7 @@ END:
 ; end _start
 
 
-; ATODU()
+; ATODU(int out rax, char const *rsi)
 ; Ascii TO Decimal Unsigned
 ; parses an ASCII string for a decimal unsigned integer.
 ; This implementation is optimized for decimal unsigned integers.
@@ -251,8 +251,8 @@ END:
 ;       ====
 ;        214
 ;
-; @regist rsi : char const * = the string to parse
 ; @regist rax : int out = the integer parsed from the string
+; @regist rsi : char const * = the string to parse
 ATODU:
     mov  r12,0          ; index of the current character (digit) in the
                         ; source
