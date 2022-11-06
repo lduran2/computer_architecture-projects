@@ -236,8 +236,8 @@ There are other registers such as the flag register `rflags` and the instruction
 |          |                          |                              |                           |                      | `register-in`    | register containing the value to write |
 | `mov`    | Intermediate to Register | Move a constant into a register | `mov <register-out>, <constant-in>` | `mov rax, sys_write` | `register-out` | the register to which to write | N/A
 |          |                          |                              |                           |                      | `constant-in`    | the constant to write
-| `push` | from Register | Push a value from a register unto the stack | `push <register-in>` | `push rdx` | `register-in` | the register whose value to push onto the stack | `rsp -= ??` |
-| `pop` | to Register | Pop a value from the stack into a register | `pop <register-out>` | `pop r13` | `register-out` | the register into which to pop the stack | `rsp += ??` |
+| `push` | from Register | Push a value from a register unto the stack | `push <register-in>` | `push rdx` | `register-in` | the register whose value to push onto the stack | `rsp -= 8` |
+| `pop` | to Register | Pop a value from the stack into a register | `pop <register-out>` | `pop r13` | `register-out` | the register into which to pop the stack | `rsp += 8` |
 | **ARITHMETIC**
 | `add` | Immediate to Register | Add the given constant to the value of the register | `add <register-out>, <constant-in>` | `add r8, '0'` | `register-out` | the register to which to add | N/A
 |       |                       |                                                  |                                  |               | `constant-in`     | the constant to add | N/A
@@ -247,8 +247,8 @@ There are other registers such as the flag register `rflags` and the instruction
 | `div` | from Register | Divide (unsigned) by an integer | `div <divisor>` | `div r10` | `divisor` | register containing the divisor | `rax R rdx <- (rdx:rax / divisor)`  |
 | **CONTROL TRANSFER**
 | `call` | from Memory | Jump to an subroutine address | `call <address>` | `call WRITELN` |`address`| the address to which to jump | `[rsp] <- rip` |
-|        |             |                               |                  |                ||| ` rsp -= ??` |
-| `ret`  | from Memory | Return to the location at `[rsp]` (from last `call`) | `ret` | `ret` | N/A | N/A | `rsp += ??`
+|        |             |                               |                  |                ||| ` rsp -= 8` |
+| `ret`  | from Memory | Return to the location at `[rsp]` (from last `call`) | `ret` | `ret` | N/A | N/A | `rsp += 8`
 | `jne`/`jnz` | N/A         | Jump if the previous operation did not result in zero. For `cmp` this is the equivalent of inequation | `jne <address>` | `jne DUTOA_DIVIDE_INT_LOOP` | `address` | the address to which to jump
 | `loop` | N/A | Loop until `rcx == 0` | `loop <address>` | `loop STRREV_POP_LOOP` | `address` | the address of the start of the loop | `rcx -= 1`
 | `int` | N/A | Perform an interrupt. | `int <code>` | `int 80h` | `code` | the code of the interrupt to perform | [^ int-side_effect] |
