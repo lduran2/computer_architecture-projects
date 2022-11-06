@@ -109,7 +109,7 @@
     <td><code>R8D</code></td>
     <td><code>R8W</code></td>
     <td></td>
-    <td><code>R8</code></td>
+    <td><code>R8B</code></td>
     <td>Register #8</td>
     <td>No</td>
   </tr>
@@ -119,7 +119,7 @@
     <td><code>R9D</code></td>
     <td><code>R9W</code></td>
     <td></td>
-    <td><code>R9</code></td>
+    <td><code>R9B</code></td>
     <td>Register #9</td>
     <td>No</td>
   </tr>
@@ -129,7 +129,7 @@
     <td><code>R10D</code></td>
     <td><code>R10W</code></td>
     <td></td>
-    <td><code>R10</code></td>
+    <td><code>R10B</code></td>
     <td>Register #10</td>
     <td>No</td>
   </tr>
@@ -139,7 +139,7 @@
     <td><code>R11D</code></td>
     <td><code>R11W</code></td>
     <td></td>
-    <td><code>R11</code></td>
+    <td><code>R11B</code></td>
     <td>Register #11</td>
     <td>No</td>
   </tr>
@@ -149,7 +149,7 @@
     <td><code>R12D</code></td>
     <td><code>R12W</code></td>
     <td></td>
-    <td><code>R12</code></td>
+    <td><code>R12B</code></td>
     <td>Register #12</td>
     <td>No</td>
   </tr>
@@ -159,7 +159,7 @@
     <td><code>R13D</code></td>
     <td><code>R13W</code></td>
     <td></td>
-    <td><code>R13</code></td>
+    <td><code>R13B</code></td>
     <td>Register #13</td>
     <td>No</td>
   </tr>
@@ -169,7 +169,7 @@
     <td><code>R14D</code></td>
     <td><code>R14W</code></td>
     <td></td>
-    <td><code>R14</code></td>
+    <td><code>R14B</code></td>
     <td>Register #14</td>
     <td>No</td>
   </tr>
@@ -179,7 +179,7 @@
     <td><code>R15D</code></td>
     <td><code>R15W</code></td>
     <td></td>
-    <td><code>R15</code></td>
+    <td><code>R15B</code></td>
     <td>Register #15</td>
     <td>No</td>
   </tr>
