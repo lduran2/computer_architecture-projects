@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Canonical : https://github.com/lduran2/computer_architecture-projects/blob/master/x86-print_inc5/x86-print_inc5.asm
+; Canonical : https://github.com/lduran2/computer_architecture-projects/blob/master/x86-input_inc/x86-input_inc.asm
 ; Stores 5 in a register, increments the value and prints the result.
 ; This implementation uses the DUTOA procedure that we implemented.
 ;
@@ -45,7 +45,7 @@
 ;       rax for sys_exit
 ;       rdi for the exit call (e.g., EXIT_SUCCESS)
 ;
-; idiv
+; div
 ;   requires
 ;       rax for the  lower quad word (64-bits) of the 128-bit dividend
 ;       rdx for the higher quad word (64-bits) of the 128-bit dividend
@@ -81,8 +81,7 @@
 ;
 ; General-purpose registers:
 ;       r8 :
-;           int to_print;   /* the original storage of 5,
-;                            * also used for arithmetic */
+;           int to_print;   /* used for arithmetic */
 ;       r9 :
 ;           size_t tmp_n_digits;    /* temporary location for digit count */
 ;       r10:
@@ -93,7 +92,8 @@
 ;       r12:
 ;           size_t i_char;  /* digit index */
 ;       r13:
-;           char c; /* the current digit popped from the stack */
+;           char c; /* the current digit iterated to
+;                    * or popped from the stack */
 ;
 ; Special-purpose registers:
 ;
@@ -126,6 +126,9 @@
 ;               /* stores the length of ENDL (1) */
 ;               enum { ENDL_LEN = 1 };
 ;       rax:
+;           in ATODU:
+;               /* accumulation of digits parsed */
+;               int accumulator;
 ;           in DUTOA_DIVIDE_INT_LOOP:
 ;               before idiv :
 ;                   /* the  lower 64-bits of the dividend (rdx:rax) */
@@ -159,22 +162,23 @@
 
 ; In this example, to convert and print the integer, we follow this diagram:
 ;
-;                                                                  +---------+
-;                                      +-------------+             |         |
-;                                      |             |             |         |
-;                                      ^  +-------+  |             |         |
-;                                      |  |       |  |             |         |
-; OUTPUT_CBUF --------> rsi -----------+->|       | -+-> rsi ----->|         |
-;  buffer                                 |       |                | WRITELN |
-;                                         |       |                |         |
-;            +-----+                      | DUTOA |                |         |
-; (5)-> r8 ->| inc | -> r8 -------> rax ->|       |                |         |
-;            +-----+     ìnteger          |       |                |         |
-;                        to print         |       | ---> rdx ----->|         |
-;                        (64-bit)         |       |       length   |         |
-;                                         +-------+                +---------+
+;                                                                                                    +---------+
+;                                                                        +-------------+             |         |
+;                                                                        |             |             |         |
+;                                                                        ^  +-------+  |             |         |
+;                                                                        |  |       |  |             |         |
+; OUTPUT_CBUF ------------------------------------------> rsi -----------+->|       | -+-> rsi ----->|         |
+;  buffer                                                                   |       |                | WRITELN |
+;                                                                           |       |                |         |
+;                     +-------+                +-----+                      | DUTOA |                |         |
+; INPUT_CBUF -> rsi ->| ATODU | -> rax -> r8 ->| inc | -> r8 -------> rax ->|       |                |         |
+;                     +-------+                +-----+                      |       |                |         |
+;                                                                           |       | ---> rdx ----->|         |
+;                                                                           |       |       length   |         |
+;                                                                           +-------+                +---------+
 ;
-;         Figure 1. Converting and printing an unsigned integer.
+;         Figure 1. Accepting an unsigned integer from input,
+;                     converting and printing it.
 ; 
 
 
@@ -224,24 +228,50 @@ END:
 
 
 ; ATODU()
+; Ascii TO Decimal Unsigned
+; parses an ASCII string for a decimal unsigned integer.
+; This implementation is optimized for decimal unsigned integers.
 ;
+; The value is obtained by looping through the character in the string,
+; multiplying the accumulation so far by 10, and adding the new digit
+; found to the accumulation until a null character is found.
+;
+; E.g.) Parsing the string 214.
+;          2
+;       x 10
+;       ----
+;         20
+;          1
+;       ====
+;         21
+;       x 10
+;       ----
+;        210
+;          4
+;       ====
+;        214
+;
+; @regist rsi : char const * = the string to parse
+; @regist rax : int out = the integer parsed from the string
 ATODU:
     mov  r12,0          ; index of the current character (digit) in the
                         ; source
     mov  rax,0          ; the parsed integer so far
-    mov  r10,10         ; set up deciaml base for division
-ATODU_MOV_LOOP:
+    mov  r10,10         ; set up decimal base for division
+    ; loop through the characters, converting them to integers
+ATODU_LOOP:
     mov  r13, rsi[r12]      ; load the character (digit)
     cmp  r13,0              ; check if null character
-    je   ATODU_MOV_LOOP_END ; break if so
-    inc  r12                ; increment the character index
+    je   ATODU_LOOP_END     ; break if so
     mul  r10                ; perform the multiplication
-    and  r13,ASCII_MASK     ; ASCII is lowest 7-bits, so ignore any higher bits
+    and  r13,ASCII_MASK     ; filter non-ASCII bits
     sub  r13,'0'            ; convert ASCII numeric digit to an integer
-    add  rax,r13            ; add the next digit integer to rax
-    jmp  ATODU_MOV_LOOP     ; repeat until no more characters
-ATODU_MOV_LOOP_END:
+    add  rax,r13            ; add the next digit integer to the accumulation
+    inc  r12                ; increment the character index
+    jmp  ATODU_LOOP         ; repeat until no more characters
+ATODU_LOOP_END:
     ret
+; end ATODU
 
 
 ; DUTOA(out char *rsi, out int rdx, int rax)
@@ -279,7 +309,7 @@ ATODU_MOV_LOOP_END:
 DUTOA:
     mov  r9,0           ; initialize digit count
                         ; the # of digits extracted from the integer
-    mov  r10,10         ; set up deciaml base for division
+    mov  r10,10         ; set up decimal base for division
 ; loop while dividing (rdx:rax) by base (10)
 ; and pushing each digit onto the stack
 DUTOA_DIVIDE_INT_LOOP:
