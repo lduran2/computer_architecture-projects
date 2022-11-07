@@ -18,11 +18,11 @@ section .text
 _start:
     ; C equivalent: WRITE(GREETING);
     mov  rsi,GREETING       ; greeting string to print
-    mov  rdx,GREET_LEN      ; length of the greeting string
+    mov  rdx,GREETING.LEN   ; length of the greeting string
     call WRITE          ; print the string
     ; C equivalent: WRITE(QUERY);
     mov  rsi,QUERY          ; query string to print
-    mov  rdx,QUERY_LEN      ; length of the query string
+    mov  rdx,QUERY.LEN      ; length of the query string
     call WRITE          ; print the string
 ; label for end of the program
 END:
@@ -34,14 +34,14 @@ END:
 ; end _start
 
 
-; WRITE(char const *rsi, size_t const rdx)
+; WRITE(void const *rsi, size_t const rdx)
 ; Writes the string to STDOUT.
 ;
 ; Additionally a system call is executed, resulting in
 ;       rcx <- rip,
 ;       r11 <- rflags.
 ;
-; @regist rsi : char const * = string to write
+; @regist rsi : void const * = string to write
 ; @regist rdx : size_t const = length of the string to write
 WRITE:
     ; C equivalent: write(FD_STDOUT, rsi, rdx);
@@ -107,14 +107,14 @@ LSBYTE:         equ 0ffh
 ;   + the string "Good morning, world!"
 ;   + followed by the newline character '\x0a'
 GREETING:    db "Good morning, world!", 0ah
-; calculate the length of GREETING giving GREET_LEN.
+; calculate the length of GREETING giving GREETING.LEN.
 ; $ refers to the last byte of GREETING.
-GREET_LEN:   equ ($ - GREETING)
+GREETING.LEN:   equ ($ - GREETING)
 
 ; define bytes at QUERY as
 ;   + the string "How are you?"
 ;   + followed by the newline character '\x0a'
 QUERY:       db "How are you?", 0ah
-; calculate the length of QUERY giving QUERY_LEN.
-QUERY_LEN:   equ ($ - QUERY)
+; calculate the length of QUERY giving QUERY.LEN.
+QUERY.LEN:   equ ($ - QUERY)
 

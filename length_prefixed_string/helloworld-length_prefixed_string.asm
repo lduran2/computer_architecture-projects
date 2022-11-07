@@ -53,19 +53,19 @@ END:
 ; end _start
 
 
-; WRITE_LPS(char const *ref rsi)
+; WRITE_LPS(void const *ref rsi)
 ; Writes the given length-prefixed string to STDOUT.
 ;
-; LP_GET_BUF_LEN is called.
+; LP.BUF_LEN is called.
 ; Additionally a system call is executed, resulting in
 ;       rcx <- rip,
 ;       r11 <- rflags.
 ;
-; @regist rsi : char const *ref = string to write
-; @see LP_GET_BUF_LEN
+; @regist rsi : void const *ref = string to write
+; @see LP.BUF_LEN
 WRITE_LPS:
     ; C equivalent: write(FD_STDOUT, &rsi[1], *rsi);
-    call LP_GET_BUF_LEN     ; separate the string and its length
+    call LP.BUF_LEN     ; separate the string and its length
     ; print the string now in rsi of length rdx
     mov  rax,sys_write  ; system call to perform
     mov  rdi,FD_STDOUT  ; file descriptor to which to write
@@ -74,23 +74,23 @@ WRITE_LPS:
 ; end WRITE_LPS
 
 
-; LP_GET_BUF_LEN(char const *ref rsi, size_t const out rdx)
+; LP.BUF_LEN(void const *ref rsi, size_t const out rdx)
 ; Separate the given byte buffer and its length.
 ; Since the address at rsi is overwritten, it is important to keep another
 ; reference to it.
-; @regist rsi : char const *ref = the byte buffer
+; @regist rsi : void const *ref = the byte buffer
 ; @regist rdx : size_t const out = length of the byte buffer
 ; @precondition:
 ;       rsi points to the length-prefix byte of the buffer
 ; @postcondition:
 ;       rsi will point to the first non-length byte in the buffer
 ;       rdx will contain the length of the byte buffer
-LP_GET_BUF_LEN:
+LP.BUF_LEN:
     mov  rdx,[rsi]      ; get length of the byte buffer
     and  rdx,LSBYTE     ; ignore all but least significant byte
     inc  rsi            ; move to first byte in buffer
     ret
-; end LP_GET_BUF_LEN
+; end LP.BUF_LEN
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -124,9 +124,9 @@ section .data
 ;   into the symbol table.  Thus, after "equate", the address is the
 ;   same as before it, whereas after "define", the address is moved
 ;   forward as much as the definition required;  e.g.,
-;       GREETING:    db GREET_LEN, "Hello world!", 0ah
+;       GREETING:    db GREETING.LEN, "Hello world!", 0ah
 ;   moves the address forward 14 bytes:
-;       + the byte defined by GREET_LEN
+;       + the byte defined by GREETING.LEN
 ;       + the length of "Hello world!"
 ;       + a newline character.
 ;
@@ -148,17 +148,17 @@ LSBYTE:         equ 0ffh
 ;   + prefix of the string's total length
 ;   + the string "Good morning, world!"
 ;   + followed by the newline character '\x0a'
-GREETING:    db GREET_LEN, "Good morning, world!", 0ah
-; calculate the length of GREETING giving GREET_LEN.
+GREETING:       db GREETING.LEN, "Good morning, world!", 0ah
+; calculate the length of GREETING giving GREETING.LEN.
 ; $ refers to the last byte of GREETING.
 ; Subtract (GREETING + 1) because the length is at GREETING[0]
-GREET_LEN:   equ ($ - (GREETING + 1))
+GREETING.LEN:   equ ($ - (GREETING + 1))
 
 ; define bytes at QUERY as
 ;   + prefix of the string's total length
 ;   + the string "How are you?"
 ;   + followed by the newline character '\x0a'
-QUERY:       db QUERY_LEN, "How are you?", 0ah
-; calculate the length of QUERY giving QUERY_LEN.
-QUERY_LEN:   equ ($ - (QUERY + 1))
+QUERY:      db QUERY.LEN, "How are you?", 0ah
+; calculate the length of QUERY giving QUERY.LEN.
+QUERY.LEN:  equ ($ - (QUERY + 1))
 
