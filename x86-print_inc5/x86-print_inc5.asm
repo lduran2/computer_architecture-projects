@@ -3,13 +3,16 @@
 ; Stores 5 in a register, increments the value and prints the result.
 ; This implementation uses the DUTOA procedure that we implemented.
 ;
+; Additionally, this implementation prints the string directly from the
+; stack.
+; Leaving the string on the stack is risky because it risks the string
+; being overwritten.  It's a useful optimization if the string will
+; be used immediately.
+;
 
 ; For this implementation, DUTOA was based off of DITOA, but optimized
 ; for unsigned integers.  Thus, the sign bit is assumed to be 0, which
-; means that SIGN128 will not be needed.  However, since DITOA also
-; depends on STRREV_POP_INIT, we will also need this.
-; DUTOA also accepts a character buffer in rsi, which we will need to
-; allocate in the .bss section.
+; means that SIGN128 will not be needed.
 ;
 ; We also included WRITELN to make printing easier.
 ;
@@ -53,6 +56,11 @@
 ;       at rax, the quotient
 ;       at rdx, the remainder
 ;
+; rbp
+;       as a convention, the base pointer register rbp is often used to
+;       back up and restore the stack pointer register rsp in
+;       procedures
+;
 ; push
 ;   output
 ;       at rsp, when a new value is added, the stack pointer moves back
@@ -70,10 +78,6 @@
 ;   output
 ;       at rsp, pops the current value off the stack, then jumps to it
 ;
-; loop
-;   requires
-;       rcx for the count down counter
-;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Register->Variable map ;
@@ -88,13 +92,6 @@
 ;       r10:
 ;           enum { base = 10 }; /* the literal 10,
 ;                                * used for the base of decimal numbers */
-;       r11:
-;           /* unused because syscall stores rflags there */
-;       r12:
-;           size_t i_char;  /* index of current digit
-;                            * in buffer INT_STR_REP */
-;       r13:
-;           char c; /* the current digit popped from the stack */
 ;
 ; Special-purpose registers:
 ;
@@ -122,7 +119,7 @@
 ;                * integer.  Since the purpose is to print this string
 ;                * representation, this is also the length of the string
 ;                * to write for WRITELN. */
-;               size_t const N_DIGITS;
+;               size_t const INT_STR_REP_LEN;
 ;           after first syscall in WRITELN:
 ;               /* stores the length of ENDL (1) */
 ;               enum { ENDL_LEN = 1 };
@@ -145,30 +142,36 @@
 ;               /* the exit code to return to shell */
 ;               int exit_status;
 ;       rsi:
-;           for DUTOA / for WRITELN:
-;               /* the address of the buffer for the string
-;                * representation INT_STR_REP.  Since the purpose is to
+;           after DUTOA / for WRITELN:
+;               /* the address of the first qword of the string
+;                * representation on stack.  Since the purpose is to
 ;                * print this string representation, this is also the
-;                * address of the string to write. */
-;               char *int_str_rep;
+;                * address of the string to write.
+;                *
+;                * The type is a qword string.
+;                * This works by placing a character every 8 bytes.
+;                * Each intermediate byte is filled with a null
+;                * character 0h.  Since sys_write requires a size in
+;                * bytes, the whole string is printed, rather than
+;                * being null-terminated.  This works in C as well.
+;                */
+;               int *int_str_rep;
 ;           after first syscall in WRITELN:
 ;               /* stores the line feed character */
 ;               char const *const ENDL = "\n";
-;       rcx:
-;           size_t k;  /* digit countdown counter in STRREV_POP_LOOP */
+;       rbp:
+;               /* backs up the stack pointer */
+;               /* (no C equivalent) */
 ;
 
 ; In this example, to convert and print the integer, we follow this diagram:
 ;
-;                                                                  +---------+
-;                                      +-------------+             |         |
-;                                      |             |             |         |
-;                                      ^  +-------+  |             |         |
-;                                      |  |       |  |             |         |
-; INT_STR_REP --------> rsi -----------+->|       | -+-> rsi ----->|         |
-;  buffer                                 |       |                | WRITELN |
+;                                         +-------+                +---------+
 ;                                         |       |                |         |
-;            +-----+                      | DUTOA |                |         |
+;                                         |       | ---> rsi ----->|         |
+;                                         |       |       string   |         |
+;                                         |       |       to print |         |
+;            +-----+                      | DUTOA |       on stack | WRITELN |
 ; (5)-> r8 ->| inc | -> r8 -------> rax ->|       |                |         |
 ;            +-----+     ìnteger          |       |                |         |
 ;                        to print         |       | ---> rdx ----->|         |
@@ -192,16 +195,16 @@ section .text
 ; Beginning of the program.
 _start:
     ; change the value of the register to print, r8
-    mov  r8,5                   ; store the value 5 in the register
+    mov  r8,215                 ; store the value 5 in the register
     inc  r8                     ; increment the value
     ; convert to an ASCII character string
     mov  rax,r8                 ; copy r8 into rax
     ; now rax is ready for DUTOA
-    mov  rsi,INT_STR_REP        ; set rsi to address of the string buffer
     call DUTOA                  ; perform Decimal Integer TO Ascii
     ; print the string representation on a line
-    ; rsi already contains the buffer from earlier.
-    ; And as a result of DUTOA, rdx already contains its length.
+    ; As a result of DUTOA,
+    ;   rsi already points to the string on the stack.
+    ;   rdx already contains its length.
     call WRITELN
 ; label for end of the program
 END:
@@ -237,19 +240,16 @@ END:
 ;
 ; As a result the digits will be backwards.
 ; The plan is to push each digit of the integer onto the stack instead
-; of storing it in the buffer because the stacks is last-in--first-out.
-; Then inline STRREV_POP_INIT from a string reversing procedure to
-; revert the digits to the proper order.
-; This implementation has STRREV_POP_INIT directly after the
-; DUTOA_DIVIDE_INT_LOOP_END.
+; of storing it in a buffer because the stacks is last-in--first-out.
 ;
-; @regist rsi : char * = string converted from integer
+; @regist rsi : out char * = string converted from integer on stack
 ; @regist rdx : out int = length of string converted from integer
 ; @regist rax : int = lower quad word of integer to convert
 DUTOA:
     mov  r9,0           ; initialize digit count
                         ; the # of digits extracted from the integer
     mov  r10,10         ; set up deciaml base for division
+    mov  rbp,rsp        ; backup the stack pointer
 ; loop while dividing (rdx:rax) by base (10)
 ; and pushing each digit onto the stack
 DUTOA_DIVIDE_INT_LOOP:
@@ -269,40 +269,18 @@ DUTOA_DIVIDE_INT_LOOP:
     cmp  rax,0                  ; if (quotient != 0)
     jne  DUTOA_DIVIDE_INT_LOOP  ;       then repeat
 DUTOA_DIVIDE_INT_LOOP_END:
+    mov  rsi,rsp    ; store the current stack pointer in rsi
+    mov  rsp,rbp    ; restore the stack pointer
     mov  rdx,r9     ; store string length (digit count) for sys_write
-; reverse the string of digits
-STRREV_POP_INIT:
-    mov  rcx,rdx        ; set counter to string length (digit count)
-    mov  r12,0          ; index of the current character (digit) in the
-                        ; destination
-    ; Reminder: We skip register r11 because it is used by syscall.
-; pop each character (digit) off the stack
-STRREV_POP_LOOP:
-    ; The loop instruction performs a countdown to 0, which always uses
-    ; rcx as the loop variable.
-    ; So the C equivalent to loop <any label>:
-    ;   for (; (rcx != 0); --rcx) { <...> }
-    ;
-    ; loop invariant:
-    ; At this point in this loop it's always the case that
-    ;       rcx + r12 = rdx.
-    pop  r13                ; pop the next character (digit) from the stack
-                            ; and store it in register r13
-    mov  rsi[r12], r13      ; place the character (digit) at the index.
-    ; This rsi[r12] syntax is very similar to a C array.
-    ; An alternative syntax is [rsi+r12], used in DITOA, which treats
-    ; the operand of the brackets [] as a pointer. 
-    ; The C equivalent would be *(rsi+r12).
-    inc  r12                ; next index of character in destination
-    loop STRREV_POP_LOOP    ; repeat (rdx) times using loop rcx as variable
-STRREV_POP_LOOP_END:
+    ; the stack contains qwords
+    imul rdx,QWORD_SIZE     ; so convert length to bytes
     ret
 ; end DUTOA
 
 
-; WRITELN(char const *rsi, size_t rdx)
+; WRITELN(void const *rsi, size_t rdx)
 ; Writes the given string followed by a newline character.
-; @regist rsi : char const * = string to write on remainder of current line
+; @regist rsi : void const * = string to write on remainder of current line
 ; @regist rdx : size_t = length of the string `rsi`
 WRITELN:
     ; C equivalent: write(FD_STDOUT, rsi, rdx);
@@ -336,35 +314,8 @@ EXIT_SUCCESS:   equ 0
 ; Constants:
 ;   newline character
 ENDL:           db 0ah  ; C equivalent: char const *const ENDL = "\n";
-;   character length of a decimal integer (20 digits + sign)
-INT_LEN:        equ (20 + 1)
-
-; INT_LEN will be used as the length to allocate the buffer
-; INT_STR_REP.
-;
-; Reminder that INT_LEN above is like a C language macro.  In C,
-; macros are expanded in the preprocessing step of the compilation
-; process;  in Assembly, it is a similar process, but the label
-; (e.g., INT_LEN) instead becomes a synonym for the given value
-; (e.g., (20 + 1)) in the symbol table used to assemble the program.
-; Thus, it would not be possible to wait until runtime to define a size
-; INT_LEN for INT_STR_REP using a register.  By then it would be too
-; late!  So instead, we give INT_LEN a maximum value (20 digits + sign)
-; that we can expect for a 64-bit number.
-;
-; Also reminder that equ (equations) like INT_LEN do not take up space
-; in memory during runtime.
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; This segment allocates memory to which to write.
-section .bss
-; allocate space for string representations of integers
-INT_STR_REP:    resb INT_LEN    ; C equivalent:
-                                ; char int_str_rep[(size_t)INT_LEN];
-
-; Note that db (define bytes, e.g., ENDL) makes the label a pointer to
-; an array of bytes having the given value, whereas resb (reserve
-; bytes, e.g., INT_STR_REP) creates an array of the given size at the label.
-;
+;   each integer is a quad word = 8 bytes.
+;   This is used because each address in x86-64 is
+;   64-bits = 8 bytes = 1 quad word.
+QWORD_SIZE:     equ 8
 
